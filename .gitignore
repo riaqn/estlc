@@ -187,3 +187,11 @@ FakesAssemblies/
 GeneratedArtifacts/
 _Pvt_Extensions/
 ModelManifest.xml
+/compiler/compiler (2).zip
+/compiler/compiler.vcxproj
+/compiler/compiler.vcxproj.filters
+/compiler/qsort.ast
+/compiler/qsort.mfc
+/compiler/qsort.tks
+/compiler/test.mfc
+/compiler.sln

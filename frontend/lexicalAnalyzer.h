@@ -1,5 +1,5 @@
 #pragma once
-#include "token.h"
+#include "tokenStream.h"
 #include <iostream>
 class LexicalAnalyzer
 {

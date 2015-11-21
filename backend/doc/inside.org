@@ -1,0 +1,130 @@
+#+Title: Inside the language
+* Argument Passing
+  We use /Closure Conversion/ to handle the passing of argument, i.e.,
+  a frame full of values of free variables is passed to the function.
+  
+  E.g., a program as follows:
+  #+begin_src lisp
+    ((lambda (a:int)
+      (lambda (b:int)
+        + a b))
+    3 5)
+  #+end_src
+  Note that we first define an (anonymous) function, which takes an
+  =int= as argument =a= and returns a function, which again
+  takes an =int= as argument =b= and returns the sum of the two =int=.
+
+  Then we apply this defined function to =3= and =5=. This simple
+  program will be transformed into a C+ code as follows:
+  #+begin_src cpp
+    typedef std::map<string, void *> Env;
+
+    struct closure {
+      void *func;
+      Env env;
+    };
+
+    struct closure *f0(Env env) {
+      return closure{f1, env};
+    }
+    void *f1(Env env) {
+      /* suppose that the primitive plus is defined as (x : int) (y :
+         int) -> int*/
+      push(env, env['x']);
+      struct closure c = primitive_plus(env);
+      push(c.env, env['y']);
+      return c.func(c.env);
+    }
+
+    void *main(void **env) {
+      env['a'] = 3;
+      struct closure c = f0(env);
+      c.env['b'] = 5;
+      return c.func(c.env);
+    }
+  #+end_src
+  *Note* The above C++ code is for demostrating /Closure Conversion/
+   only and should not be taken seriously. E.g. we surely won't use
+   =std::map= for storing environment as it's too slow; instead we will
+   use a stack frame in heap, where =frame[0]= stores the most recent
+   pushed argument and so on.
+* Types
+  There 're only two ways to define new types in our type system: sum type and product
+  type; all types 're defined by consturction of these two. While one
+  may argue that primitive types like =int= must be built-in, I will
+  show in following sections that =int=, as well as other primitive
+  types, is /definable/ in our language.
+** Product Types
+   Takes the type =Person= as example, a person has a name and an age.
+   We thus have
+   #+begin_example
+     Person = person string int
+   #+end_example
+   Note that in addition to =Person=, we also defined a /constructor/
+   =person=, which has type =string -> int -> Person=. We now can
+   create a new =Person= in this way:
+   #+begin_example
+   person "Tom" 18
+   #+end_example
+   to represent a person, whose name is "Tom" and is 18 years old.
+
+   One can also define a product type with no field, as follows
+   #+begin_example
+   Void = void
+   #+end_example
+   the constructor =void= is of type =Void=. As it does not take any
+   argument, you can treat it as a "constant" of type =Void=. 
+   What's the purpose of this? Read on.
+** Sum Types
+   A *thing* can be either a person or an animal.
+   #+begin_example
+     Animal = animal bool // can it fly?
+     Thing = person_thing Person | animal_thing Animal
+   #+end_example
+   What 's the types of =person_thing= and =animal_thing=? Well, they
+   're just functions to convert =Person= (=Animal=) to =Thing=; so
+   =person_thing= has type =Person->Thing= and so is =animal_thing=.
+   
+** Defining Primitive Types
+   After familiar with product types and sum types, now we can define
+   primitive types like =int=. 
+   #+begin_example
+     Zero = zero
+     One = one
+     Two = two
+     ...
+
+     Int = zero_int Zero | one_int One | two_int Two | ...
+   #+end_example
+   =zero= is of type =Zero= (back to section 'Sum Type' if you can't
+   follow), and =zero_int= is of type =Zero->Int=. By writing =zero=
+   you 're actually refering to a constant of type =Zero= and you must
+   write =zero_int zero= to represent an =Int=.
+  
+* Deproduct and Desum
+  Ok, now I get a =Person= in my function, how can I refer to the age
+  of that person? 
+
+  We introduce an operation /Deproduct/, which serves for a contrary
+  purpose as the =Person_cons=; that is, instead of zipping a =String=
+  and a =Int= into a =Person=, we extract a =String= and a =Int= from a =Person=. 
+
+  Say the variable representing the person is =p=, we can write code
+  as follows:
+  #+begin_example
+    (deproduct p (name age)
+               ("hello " + name))
+  #+end_example
+  =deproduct= on the same layer of =lambda= or =application=; it's not
+  a function, but a low-level operator.
+
+  For a similar purpose, here is the =desum= (assuming we have a
+  =Thing= named =t=):
+  #+begin_example
+      (desum t 
+      (p (deproduct p (name age) ("you are a person named " + name)))
+      (a (deproduct a (canfly) (desum canfly (t "you animal can fly")
+                                             (f "you animal cannot fly")))))
+
+  #+end_example
+  /Need explaination here/

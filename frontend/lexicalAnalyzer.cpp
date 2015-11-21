@@ -70,8 +70,8 @@ TokenStream LexicalAnalyzer::parse(istream& is){
 			break;
 		case '#':
 			getline(is, buffer);
-			line++;
 			tokenStream.append(Token(Token::COM, buffer, line));
+			line++;
 			buffer.clear();
 			break;
 		case '+':

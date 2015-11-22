@@ -43,7 +43,7 @@ namespace ast{
 			}
 			if (right != NULL && ((PrimitiveType*)right) == NULL){
 				delete right;
-			}
+			}	
 		}
 		std::string toString()const{ return left->toString() + "->" + right->toString(); }
 	};
@@ -55,7 +55,7 @@ namespace ast{
 	struct Reference : public Term {
 		std::string name;
 		Reference(const std::string name) :name(name){}
-		std::string toString() const{ return name; }
+		std::string toString() const{ return "\"" + name + "\""; }
 	};
 
 	struct Abstraction : public Term {
@@ -71,7 +71,7 @@ namespace ast{
 				delete term;
 			}
 		}
-		std::string toString() const{ return "Abs:arg={" + arg + "}\ntype={" + type->toString() + "}\nterm={" + term->toString() + "}"; }
+		std::string toString() const{ return "{\"symbol\":\"Abstraction\", \"arg\":\"" + arg + "\", \"type\":\"" + type->toString() + "\", \"term\":" + term->toString() + "}"; }
 	};
 
 	struct Application : public Term {
@@ -86,7 +86,8 @@ namespace ast{
 				delete arg;
 			}
 		}
-		std::string toString()const { return "App:func={" + func->toString() + "}\narg={" + arg->toString() + "}"; }
+		std::string toString()const { return "{\"symbol\":\"Application\", \"func\":" + \
+											 func->toString() + ", \"arg\":" + arg->toString() + "}"; }
 	};
 }
 

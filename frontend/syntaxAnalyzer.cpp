@@ -12,16 +12,9 @@ SyntaxAnalyzer::~SyntaxAnalyzer()
 	if (root != NULL){
 		delete root;
 	}
-}
-
-void SyntaxAnalyzer::printTree(ostream& os){
-	if (root != NULL){
-		os << root->toString();
+	for (map<string, ast::Type*>::iterator it = types.begin(); it != types.end(); it++){
+		delete it->second;
 	}
-}
-
-inline bool SyntaxAnalyzer::isTypeId(const Token& token){
-	return (token.type == Token::ID) || (token.type == Token::NAT) || (token.type == Token::BOOL);
 }
 
 ast::Term* SyntaxAnalyzer::buildBlock(TokenStream& stream){
@@ -45,11 +38,12 @@ ast::Term* SyntaxAnalyzer::buildBlock(TokenStream& stream){
 
 void SyntaxAnalyzer::buildTypeDef(TokenStream& stream){
 	Token token = stream.next();
-
 	if (token.type != Token::ID){
 		throw syntax_error(token.name, token.line, "Should be an ID");
 	}
+	string typeId = token.name;
 	ast::AlgebraicType* type = new ast::AlgebraicType();
+	types[typeId] = type;
 
 	token = stream.next();
 	if (token.type == Token::COLON){
@@ -86,9 +80,12 @@ void SyntaxAnalyzer::buildTypeDef(TokenStream& stream){
 			token = stream.next();	// ->
 			if (token.type != Token::PRODUCT){
 				stream.back();
-				break;
+				break;			}
+
+			if (types.find(arg) == types.end()){
+				types[arg] = new ast::PrimitiveType(arg);
 			}
-			cons.args.push_back(new ast::PrimitiveType(arg));
+			cons.args.push_back(types[arg]);
 		}
 
 		type->constructors.push_back(cons);
@@ -102,17 +99,19 @@ void SyntaxAnalyzer::buildTypeDef(TokenStream& stream){
 // return a type, possible primitive or algebraic or production of them
 ast::Type* SyntaxAnalyzer::buildFuncType(TokenStream& stream){
 	Token token = stream.next();	// type id
-	if (!isTypeId(token)){
+	if ((token.type == Token::ID) || (token.type == Token::NAT) || (token.type == Token::BOOL)){
 		throw syntax_error(token.name, token.line, "Should be a type id");
 	}
 	string left = token.name;
-	ast::PrimitiveType* type = new ast::PrimitiveType(left);
+	if (types.find(left) == types.end()){
+		types[left] = new ast::PrimitiveType(left);
+	}
 	token = stream.next();
 	if (token.type != Token::PRODUCT){
 		stream.back();
-		return type;
+		return types[left];
 	}
-	return new ast::FunctionType(type, buildFuncType(stream));
+	return new ast::FunctionType(types[left], buildFuncType(stream));
 }
 
 // return the deepest term reference
@@ -121,7 +120,7 @@ ast::Term* SyntaxAnalyzer::buildFuncDef(TokenStream& stream){
 	if (token.type != Token::ID){
 		throw syntax_error(token.name, token.line, "Should be an ID");
 	}
-	string funcid = token.name;
+	string funcId = token.name;
 
 	ast::Type* type = NULL;
 	ast::Term* term = NULL;
@@ -168,20 +167,20 @@ ast::Term* SyntaxAnalyzer::buildFuncDef(TokenStream& stream){
 		type = new ast::FunctionType(tps[i], type);
 		term = new ast::Abstraction(ids[i], tps[i], term);
 	}
-	ast::Abstraction* func = new ast::Abstraction(funcid, type, buildBlock(stream));
+	ast::Abstraction* func = new ast::Abstraction(funcId, type, buildBlock(stream));
 
 	return new ast::Application(func, term);
 }
 
 ast::Term* SyntaxAnalyzer::buildFuncDesig(TokenStream& stream){
 	Token token = stream.next();	// funct id
-	string id = token.name;
+	string funcId = token.name;
 	token = stream.next();
 	if (token.type == Token::RPAR){
-		return new ast::Reference(id);
+		return new ast::Reference(funcId);
 	}
 	stream.back();
-	ast::Application *term = new ast::Application(new ast::Reference(id), buildExpr(stream));
+	ast::Application *term = new ast::Application(new ast::Reference(funcId), buildExpr(stream));
 	token = stream.next();
 	while (token.type != Token::RPAR){
 		stream.back();

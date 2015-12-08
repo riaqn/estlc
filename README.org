@@ -5,5 +5,6 @@
                ensure compatibility)
   - front :: the branch for front-end development.
   - back :: the branch for back-end development.
+  - driver :: the branch for driver development.
   - master :: the branch for merging ALL other branches and resolve
               conflicts.

@@ -1,6 +1,6 @@
 #pragma once
 #include "token.h"
-#include "syntaxTree.h"
+#include <ast.hpp>
 #include <map>
 
 class SyntaxAnalyzer

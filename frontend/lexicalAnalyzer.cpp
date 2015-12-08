@@ -1,4 +1,4 @@
-#include "LexicalAnalyzer.h"
+#include "lexicalAnalyzer.h"
 #include <fstream>
 #include "myException.h"
 

@@ -1,12 +1,12 @@
 #include <ast.hpp>
 #include <stdexcept>
 
-class TermException : public std::runtime_error {
+class TermException : public std::exception {
 public:
   TermException(const ast::Term *const term, const ast::Type *const type);
 private:
   const ast::Term *const term_;
-  const ast::Term *const type_;
+  const ast::Type *const type_;
 };
 
 class TypeNotMatch : public TermException {
@@ -18,5 +18,5 @@ private:
 
 class NotFunction : public TermException {
 public:
-  NotFunction(const ast::Term *const term, const ast::Type *const type);
+  NotFunction(const TermException &exception);
 };

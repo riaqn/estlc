@@ -30,7 +30,7 @@ Term Codegen::generate(const ast::Application *app, Env &env) {
   //type check
   ast::FunctionType *func_type = static_cast<ast::FunctionType *>(func.type);
   if (func_type == NULL)
-    throw new NotFunction(app->func, func.type);
+    throw new NotFunction(TermException(app->func, func.type));
   if (func_type->left != arg.type)
     throw new TypeNotMatch(TermException(app->arg, arg.type), func_type->left);
 

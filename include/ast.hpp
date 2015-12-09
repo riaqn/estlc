@@ -21,7 +21,7 @@ namespace ast{
   };
   
   struct ProductType : public Type {
-    const Type *x, *y;
+    std::vector<const Type *> types;
     const std::string cons;
   };
 
@@ -63,7 +63,7 @@ namespace ast{
   };
 
   struct Deproduct : public Term {
-    const std::string x, y;
+    const std::vector<std::string> names;
     const Term *term;
   };
 }

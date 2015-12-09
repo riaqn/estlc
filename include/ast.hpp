@@ -4,67 +4,67 @@
 #include <utility>
 
 namespace ast{
-	struct Type {
-          virtual ~Type() = 0;
-	};
+  struct Type {
+    virtual ~Type() = 0;
+  };
 
-	struct PrimitiveType : public Type {
-		std::string name;
-		PrimitiveType(const std::string& name);
-	};
+  struct PrimitiveType : public Type {
+    const std::string name;
+    PrimitiveType(const std::string& name);
+  };
 
   struct SumType : public Type {
     /* 
        pair is the type and the converter from subtypes to supertype
-     */
-    std::vector<std::pair<Type *, std::string> > types;
+    */
+    std::vector<std::pair<const Type *, const std::string> > types;
   };
   
   struct ProductType : public Type {
-    Type *x, *y;
-    std::string cons;
+    const Type *x, *y;
+    const std::string cons;
   };
 
-	struct FunctionType : public Type {
-		Type *left, *right;
-		FunctionType(Type *left, Type *right);
-		~FunctionType();
-	};
+  struct FunctionType : public Type {
+    const Type *left, *right;
+    FunctionType(const Type *const left, const Type *const right);
+    ~FunctionType();
+  };
 
-	struct Term {
-          virtual ~Term() = 0;
-	};
+  struct Term {
+    virtual ~Term() = 0;
+  };
 
-	struct Reference : public Term {
-		std::string name;
-		Reference(const std::string name);
-	};
+  struct Reference : public Term {
+    const std::string name;
+    Reference(const std::string &name);
+  };
 
-	struct Abstraction : public Term {
-		std::string arg;
-		Type* type; //type of arg
-		Term* term;
-		Abstraction(const std::string& arg, Type* type, Term* term);
-		~Abstraction();
-	};
+  struct Abstraction : public Term {
+    const std::string arg;
+    const Type* type; //type of arg
+    const Term* term;
+    Abstraction(const std::string& arg, const Type* const type, const Term* const term);
+    ~Abstraction();
+  };
 
-	struct Application : public Term {
-		Term* func;
-		Term* arg;
-		Application(Term* func, Term* arg);
-		~Application();
-	};
+  struct Application : public Term {
+    const Term* func;
+    const Term* arg;
+    Application(const Term* const func, const Term* const arg);
+    ~Application();
+  };
 
   struct Desum : public Term {
     /* 
        the terms corresponding to subtypes
-     */
+    */
     std::vector<Term *> cases;
   };
 
   struct Deproduct : public Term {
-    std::string x, y;
-    Term *term;
+    const std::string x, y;
+    const Term *term;
   };
 }
 

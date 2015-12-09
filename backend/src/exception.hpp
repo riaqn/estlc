@@ -1,5 +1,5 @@
 #include <ast.hpp>
-#include <stdexcept>
+#include <typeinfo>
 
 class TermException : public std::exception {
 public:
@@ -16,7 +16,16 @@ private:
   const ast::Type *const expect_;
 };
 
-class NotFunction : public TermException {
+class ClassNotMatch : public TermException {
 public:
-  NotFunction(const TermException &exception);
+  ClassNotMatch(const TermException &exception, const std::type_info &expect);
+private:
+  const std::type_info &expect_;
+};
+
+class NumberNotMatch : public TermException {
+public:
+  NumberNotMatch(const TermException &exception, const size_t expect);
+private:
+  const size_t expect;
 };

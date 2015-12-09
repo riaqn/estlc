@@ -8,23 +8,26 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 
-struct Term {
-  llvm::Function *value;
-  ast::Type *type;
-};
-
-typedef unsigned VarIndex;
-typedef std::map<std::string, VarIndex> Env;
+#include "env.hpp"
 
 class Codegen {
-public:
-  Codegen();
-  Term generate(const ast::Term *term, Env &env);
-  Term generate(const ast::Application *app, Env &env);
 private:
+  uint64_t pointerSize;
   std::vector<llvm::Type *> argsType;
   llvm::Type *stackType, *dataType, *closureType, *funcType;
   llvm::Module *module;
   llvm::IRBuilder<> builder;
   llvm::DataLayout layout;
+public:
+  struct Term {
+    llvm::Function *value;
+    const ast::Type *type;
+  };
+  Codegen();
+  Term generate(const ast::Term *const term, Env<llvm::APInt> &env);
+  Term generate(const ast::Application *const app, Env<llvm::APInt> &env);
+  Term generate(const ast::Abstraction *const abs, Env<llvm::APInt> &env);
+  Term generate(const ast::Reference *const ref, Env<llvm::APInt> &env);
+  Term generate(const ast::Deproduct *const dep, Env<llvm::APInt> &env);
+  Term generate(const ast::Desum *const des, Env<llvm::APInt> &env);
 };

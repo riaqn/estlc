@@ -8,5 +8,3 @@ TypeNotMatch::TypeNotMatch(const TermException &exception,
                            const ast::Type *const expect)
   :TermException(exception), expect_(expect) {}
 
-NotFunction::NotFunction(const TermException &exception)
-  :TermException(exception) {}

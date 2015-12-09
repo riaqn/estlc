@@ -5,6 +5,7 @@
 
 namespace ast{
 	struct Type {
+          virtual ~Type() = 0;
 	};
 
 	struct PrimitiveType : public Type {
@@ -31,6 +32,7 @@ namespace ast{
 	};
 
 	struct Term {
+          virtual ~Term() = 0;
 	};
 
 	struct Reference : public Term {

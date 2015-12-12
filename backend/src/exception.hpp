@@ -29,3 +29,10 @@ public:
 private:
   const size_t expect;
 };
+
+class TypeException : public std::exception {
+public:
+  TypeException(const ast::Type *type);
+private:
+  const ast::Type *type;
+};

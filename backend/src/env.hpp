@@ -11,7 +11,7 @@ public:
   class NotFound : public std::exception {};
   
   ptr_t push(const std::string &name, const ast::Type *const type, const ptr_t size);
-  void pop();
+  std::tuple<const std::string, const ptr_t, const ast::Type *> pop();
   std::pair<const ptr_t , const ast::Type *> find(const std::string &name);
   ptr_t size();
 private:
@@ -27,8 +27,10 @@ ptr_t Env<ptr_t>::push(const std::string &name, const ast::Type *type, const ptr
 }
 
 template<typename ptr_t>
-void Env<ptr_t>::pop() {
+std::tuple<const std::string, const ptr_t, const ast::Type *> Env<ptr_t>::pop() {
+  auto ret = stack_.back();
   stack_.pop_back();
+  return ret;
 }
 
 template<typename ptr_t>

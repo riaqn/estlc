@@ -14,12 +14,11 @@ namespace ast{
   };
 
   struct SumType : public Type {
-    //use the first 32 bits as index
-    static const size_t idxlen = 32;
     /* 
        pair is the type and the converter from subtypes to supertype
     */
-    std::vector<std::pair<const Type *, const std::string> > types;
+    const std::vector<std::pair<const Type *, const std::string> > types;
+    SumType(const std::pair<const Type *, const std::string> &);
   };
   
   struct ProductType : public Type {
@@ -68,6 +67,11 @@ namespace ast{
   struct Deproduct : public Term {
     const Term *product;
     const std::string x, y;
+    const Term *term;
+  };
+
+  struct Program {
+    const std::vector<Type *> types;
     const Term *term;
   };
 }

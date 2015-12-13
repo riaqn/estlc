@@ -1,8 +1,9 @@
 ACLOCAL_AMFLAGS = -I m4
-AM_CPPFLAGS = -I$(top_srcdir)/../include
+AM_CPPFLAGS += -I$(top_srcdir)/../include
 
-SUBDIRS = src test
 
-lib_LTLIBRARIES = libbackend.la
-libbackend_la_SOURCES = libbackend.cpp
+SUBDIRS = src . test
+
+noinst_LTLIBRARIES = libbackend.la
+libbackend_la_SOURCES = 
 libbackend_la_LIBADD = src/libbackend.la

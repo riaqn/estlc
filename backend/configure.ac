@@ -9,6 +9,7 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIRS([m4])
 
 # Checks for programs.
+${CXXFLAGS=""}
 AC_PROG_CXX
 AM_PROG_AR
 LT_INIT
@@ -22,7 +23,13 @@ LT_INIT
 
 # Checks for library functions.
 
+AC_SUBST([AM_CXXFLAGS], ["-g3 -O0 -ggdb -Wall -Wextra -Werror"])
+AC_SUBST([AM_CPPFLAGS], [])
+
+
 AC_CONFIG_FILES([Makefile
                  src/Makefile
                  test/Makefile])
+
+
 AC_OUTPUT

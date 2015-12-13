@@ -27,12 +27,12 @@ class NumberNotMatch : public TermException {
 public:
   NumberNotMatch(const TermException &exception, const size_t expect);
 private:
-  const size_t expect;
+  const size_t expect_;
 };
 
 class TypeException : public std::exception {
 public:
   TypeException(const ast::Type *type);
 private:
-  const ast::Type *type;
+  const ast::Type *type_;
 };

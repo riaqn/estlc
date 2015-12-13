@@ -2,14 +2,16 @@
 #include "exception.hpp"
 #include <vector>
 #include <llvm/IR/Verifier.h>
+#include <llvm/IR/Function.h>
 
 using namespace llvm;
 
 Codegen::Codegen()
-  : module(new Module("", getGlobalContext())),
-    builder(getGlobalContext()),
-    layout(module),
-    context(getGlobalContext()) {
+  : context(getGlobalContext()),
+    module(new Module("", context)),
+    builder(context),
+    layout(module) {
+
   refType = PointerType::get(Type::getVoidTy(context), 0);
   
   std::vector<Type *> elems;
@@ -22,17 +24,17 @@ Codegen::Codegen()
   elems.push_back(indexType);
   elems.push_back(refType);
   sumType = StructType::get(context, elems);
-
+  
+  stackType = PointerType::get(refType, 0);
+  
   elems.clear();
   elems.push_back(stackType);
   funcType = FunctionType::get(refType, elems, false);
-
-  stackType = PointerType::get(refType, 0);
   
   elems.clear();
   elems.push_back(funcType);
   elems.push_back(stackType);
-  closureType = StructType::get(getGlobalContext(), elems);
+  closureType = StructType::get(context, elems);
 }
 
 Codegen::Term Codegen::generate(const ast::Term *term, Env<APInt> &env) {
@@ -40,6 +42,14 @@ Codegen::Term Codegen::generate(const ast::Term *term, Env<APInt> &env) {
     return generate(app, env);
   else if (const ast::Abstraction *abs = dynamic_cast<const ast::Abstraction *>(term))
     return generate(abs, env);
+  else if (const ast::Reference *ref = dynamic_cast<const ast::Reference *>(term))
+    return generate(ref, env);
+  else if (const ast::Desum *des = dynamic_cast<const ast::Desum *>(term))
+    return generate(des, env);
+  else if (const ast::Deproduct *dep = dynamic_cast<const ast::Deproduct *>(term))
+    return generate(dep, env);
+  else
+    throw ClassNotMatch(TermException(term, new ast::PrimitiveType("WTF")), typeid(ast::Term));
 }
 
 Codegen::Term Codegen::generate(const ast::Application *app, Env<APInt> &env) {
@@ -82,9 +92,8 @@ Codegen::Term Codegen::generate(const ast::Application *app, Env<APInt> &env) {
 }
 
 Codegen::Term Codegen::generate(const ast::Reference *ref, Env<APInt> &env) {
-  FunctionType *ft = FunctionType::get(refType, argsType, false);
-  Function *f = Function::Create(ft, Function::ExternalLinkage, "", module);
-  BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "", f);
+  Function *f = Function::Create(funcType, Function::ExternalLinkage, "ref_" + ref->name, module);
+  BasicBlock *bb = BasicBlock::Create(context, "", f);
   builder.SetInsertPoint(bb);
 
   auto value = env.find(ref->name);
@@ -218,23 +227,24 @@ Codegen::Term Codegen::generate(const ast::Desum *const des, Env<APInt> &env) {
   return Term{f, termtype};
 }
 
-Value *Codegen::generatePush(Value *value, Value *stack) {
+void Codegen::generatePush(Value *const value, Value *&stack) {
   (void)builder.CreateStore(value, stack);
   stack = builder.CreateAdd(stack, ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(value->getType()))));
-  return stack;
 }
+
+LoadInst *Codegen::generatePop(Type *const type, Value *&stack) {
+  stack = builder.CreateSub(stack, ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(type))));
+  return builder.CreateLoad(type, stack);
+}
+
 
 Codegen::Term Codegen::generate(const ast::Program &prog) {
   Env<APInt> env;
-  Function *f = Function::Create(funcType, Function::ExternalLinkage, "umain", module);
-  BasicBlock *bb = BasicBlock::Create(context, "", f);
-  builder.SetInsertPoint(bb);
-
-  Value *stack = f->arg_begin();
-  
+  std::vector<std::pair<std::string, Term> > funcs;
   // generate construcotr for tyeps
   for (const ast::Type *type : prog.types) {
     if (auto prim = dynamic_cast<const ast::PrimitiveType *>(type)) {
+      (void)prim;
       //do nothing for the primitive type
     } else if (auto sum = dynamic_cast<const ast::SumType *>(type)) {
       //what to do with the sum type?
@@ -246,26 +256,30 @@ Codegen::Term Codegen::generate(const ast::Program &prog) {
       }
       uint32_t idx = 0;
       for (auto pair : sum->types) {
-        const std::string cons = pair.second;
         Term term = generate(sum, idx++);
-        env.push(cons, term.type, APInt(64, layout.getTypeAllocSize(term.value->getType())));
-        stack = generatePush(term.value, stack);
+        funcs.push_back(std::make_pair(pair.second, term));
+        env.push(pair.second, term.type, APInt(64, layout.getTypeAllocSize(term.value->getType())));
       }
     } else if (auto product = dynamic_cast<const ast::ProductType *>(type)) {
       Term term = generate(product);
-      stack = generatePush(term.value, stack);
+      funcs.push_back(std::make_pair(product->cons, term));
+      env.push(product->cons, term.type, APInt(64, layout.getTypeAllocSize(term.value->getType())));
     } else {
       throw TypeException(type);
     }
   }
 
+
   Term term = generate(prog.term, env);
-  /*
-  //make sure it's list_nat -> list_nat
-  if (*term.type != umain_type)
-    throw TypeNotMatch(TermException(prog.term, term.type),
-  &umain_type);
-  */
+
+  Function *f = Function::Create(funcType, Function::ExternalLinkage, "umain", module);
+  Value *stack = f->arg_begin();
+  BasicBlock *bb = BasicBlock::Create(context, "", f);
+  builder.SetInsertPoint(bb);
+  for (auto pair : funcs) {
+
+    generatePush(pair.second.value, stack);
+  }
   
   //now call the main term
   Value *args[1] = {stack};
@@ -276,58 +290,63 @@ Codegen::Term Codegen::generate(const ast::Program &prog) {
 }
 
 Codegen::Term Codegen::generate(const ast::SumType *sum, const uint32_t idx) {
-  Function *f = Function::Create(funcType, Function::ExternalLinkage, "", module);
-  BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "", f);
+  Function *f = Function::Create(funcType, Function::ExternalLinkage, sum->types[idx].second, module);
+  BasicBlock *bb = BasicBlock::Create(context, "", f);
   builder.SetInsertPoint(bb);
 
-  Type* ITy = Type::getInt32Ty(context);
-  Constant* AllocSize = ConstantExpr::getSizeOf(sumType);
-  AllocSize = ConstantExpr::getTruncOrBitCast(AllocSize, ITy);
-  Instruction* m = CallInst::CreateMalloc(builder.GetInsertBlock(),
-                                          ITy, sumType, AllocSize);
+  Value* m = generateMalloc(sumType);
+  Value *m0 = m;
 
   Value *stack = f->arg_begin();
-  Value *x_p = builder.CreateSub(stack, ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(refType))));
-  LoadInst *x = builder.CreateLoad(refType, x_p);
+  LoadInst *x = generatePop(refType, stack);
 
-  Value *idx_p_ = m;
-  Value *x_p_ = builder.CreateAdd(m, ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(indexType))));
-
-  (void)builder.CreateStore(ConstantInt::get(indexType, idx), idx_p_);
-  (void)builder.CreateStore(x, x_p_);
   
-  builder.CreateRet(m);
+  generatePush(ConstantInt::get(context, APInt(32, idx)), m);
+  generatePush(x, m);
+  
+  builder.CreateRet(m0);
   verifyFunction(*f);
   ast::Type *type = new ast::FunctionType(sum->types[idx].first, sum);
   return Term{f, type};
 }
 
+CallInst *Codegen::generateMalloc(Type *type) {
+  static Function *malloc = NULL;
+  if (malloc == NULL) {
+    std::vector<Type*> types(1, IntegerType::get(context, 64));
+    FunctionType *malloc_type = FunctionType::get(refType, types, false);
+    malloc = Function::Create(malloc_type, Function::ExternalLinkage, "malloc", module);
+  }
+  std::vector<Value *> args;
+  args.push_back(ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(type))));
+  CallInst *call = builder.CreateCall(malloc, args);
+  return call;
+}
+
 Codegen::Term Codegen::generate(const ast::ProductType *const product) {
-  Function *f = Function::Create(funcType, Function::ExternalLinkage, "", module);
+  Function *f = Function::Create(funcType, Function::ExternalLinkage, product->cons, module);
   BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "", f);
   builder.SetInsertPoint(bb);
   // need malloc here
-  Type* ITy = Type::getInt32Ty(context);
-  Constant* AllocSize = ConstantExpr::getSizeOf(productType);
-  AllocSize = ConstantExpr::getTruncOrBitCast(AllocSize, ITy);
-  Instruction* m = CallInst::CreateMalloc(builder.GetInsertBlock(),
-                                               ITy, productType, AllocSize);
+  Value *m = generateMalloc(productType);
+  Value *m0 = m;
 
   Value *stack = f->arg_begin();
-  Value *x_p = builder.CreateSub(stack, ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(refType) * 2)));
-  Value *y_p = builder.CreateSub(stack, ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(refType))));
 
-  LoadInst *x = builder.CreateLoad(refType, x_p);
-  LoadInst *y = builder.CreateLoad(refType, y_p);
+  LoadInst *x = generatePop(refType, stack);
+  LoadInst *y = generatePop(refType, stack);
 
-  Value *x_p_ = m;
-  Value *y_p_ = builder.CreateAdd(m, ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(refType))));
-  (void)builder.CreateStore(x, x_p_);
-  (void)builder.CreateStore(y, y_p_);
+  generatePush(x, m);
+  generatePush(y, m);
 
-  builder.CreateRet(m);
+  builder.CreateRet(m0);
+
   verifyFunction(*f);
-  ast::Type *t = new ast::FunctionType(product->y, product);
-  ast::Type *t0 = new ast::FunctionType(product->x, t);
+  
+  ast::Type *t0 = new ast::FunctionType(product->x, new ast::FunctionType(product->y, product));
   return Term{f, t0};
+}
+
+void Codegen::dump() {
+  module->dump();
 }

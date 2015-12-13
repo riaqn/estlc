@@ -13,17 +13,16 @@
 
 class Codegen {
 private:
-  uint64_t pointerSize;
-  std::vector<llvm::Type *> argsType;
-  llvm::Type  *refType, *productType, *indexType, *sumType, *closureType, *stackType;
-  llvm::FunctionType *funcType;
+  llvm::LLVMContext &context;
   llvm::Module *module;
   llvm::IRBuilder<> builder;
   llvm::DataLayout layout;
-  llvm::LLVMContext &context;
 
-  ast::Type *list_nat;
-  ast::Type *umain_type;
+  std::vector<llvm::Type *> argsType;
+  llvm::Type  *refType, *productType, *indexType, *sumType, *closureType, *stackType;
+  llvm::FunctionType *funcType;
+
+
 public:
   struct Term {
     llvm::Function *value;
@@ -41,5 +40,8 @@ public:
 
 
   Term generate(const ast::Program &prog);
-  llvm::Value *generatePush(llvm::Value *value, llvm::Value *stack);
+  void generatePush(llvm::Value *const value, llvm::Value *&stack);
+  llvm::LoadInst *generatePop(llvm::Type *type, llvm::Value *&stack);
+  llvm::CallInst *generateMalloc(llvm::Type *type);
+  void dump();
 };

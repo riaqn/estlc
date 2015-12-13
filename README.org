@@ -1,5 +1,5 @@
 * Branches
-  - include :: This is the branch for header files. i.e., this is
+  - common :: This is the branch for common files. i.e., this is
                the branch for developing interfaces between components. Other
                branches should merge from this branch occasionally(to
                ensure compatibility)

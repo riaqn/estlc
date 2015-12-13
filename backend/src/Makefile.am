@@ -1,4 +1,5 @@
-AM_CPPFLAGS = -I$(top_srcdir)/../include
+COMMONDIR = $(top_srcdir)/../common
+AM_CPPFLAGS = -I$(COMMONDIR)/include
 AM_CPPFLAGS += `llvm-config --cppflags`
 AM_CXXFLAGS = `llvm-config --cxxflags`
 lib_LTLIBRARIES = libbackend.la

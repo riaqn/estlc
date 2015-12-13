@@ -1,7 +1,7 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = src
+SUBDIRS = src . test
 
-lib_LTLIBRARIES = libcommon.la
-libcommon_la_SOURCES = libcommon.cpp
+noinst_LTLIBRARIES = libcommon.la
+libcommon_la_SOURCES = 
 libcommon_la_LIBADD = src/libcommon.la

@@ -17,6 +17,11 @@
 /src/.libs/
 /src/Makefile
 /src/Makefile.in
+/test/.deps/
+/test/.libs/
+/test/Makefile
+/test/Makefile.in
+
 /stamp-h1
 
 /ar-lib

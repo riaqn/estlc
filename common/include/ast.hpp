@@ -17,13 +17,14 @@ namespace ast{
     /* 
        pair is the type and the converter from subtypes to supertype
     */
-    const std::vector<std::pair<const Type *, const std::string> > types;
-    SumType(const std::pair<const Type *, const std::string> &);
+    std::vector<std::pair<const Type *, const std::string> > types;
+    SumType(std::vector<std::pair<const Type *, const std::string> > &);
   };
   
   struct ProductType : public Type {
     const Type *x, *y;
     const std::string cons;
+    ProductType(const Type *const x, const Type *const y, const std::string &cons);
   };
 
   struct FunctionType : public Type {

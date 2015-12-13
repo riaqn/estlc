@@ -71,8 +71,9 @@ namespace ast{
   };
 
   struct Program {
-    const std::vector<Type *> types;
+    const std::vector<const Type *> types;
     const Term *term;
+    Program(const std::vector<const Type *> types, const Term *term);
   };
 }
 

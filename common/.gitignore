@@ -21,7 +21,7 @@
 /test/.libs/
 /test/Makefile
 /test/Makefile.in
-
+*.out
 /stamp-h1
 
 /ar-lib

@@ -5,7 +5,7 @@
 
 namespace ast{
 	struct Type {
-          virtual ~Type() = 0;
+		virtual ~Type() = 0;
 	};
 
 	struct PrimitiveType : public Type {
@@ -13,17 +13,19 @@ namespace ast{
 		PrimitiveType(const std::string& name);
 	};
 
-  struct SumType : public Type {
-    /* 
-       pair is the type and the converter from subtypes to supertype
-     */
-    std::vector<std::pair<Type *, std::string> > types;
-  };
-  
-  struct ProductType : public Type {
-    Type *x, *y;
-    std::string cons;
-  };
+	struct SumType : public Type {
+		/*
+		pair is the type and the converter from subtypes to supertype
+		*/
+		std::vector<std::pair<Type *, std::string> > types;
+	};
+
+	struct ProductType : public Type {
+		Type *x, *y;
+		std::string cons;
+		ProductType(Type *x, Type *y, std::string cons);
+		~ProductType();
+	};
 
 	struct FunctionType : public Type {
 		Type *left, *right;
@@ -32,7 +34,7 @@ namespace ast{
 	};
 
 	struct Term {
-          virtual ~Term() = 0;
+		virtual ~Term() = 0;
 	};
 
 	struct Reference : public Term {
@@ -55,16 +57,16 @@ namespace ast{
 		~Application();
 	};
 
-  struct Desum : public Term {
-    /* 
-       the terms corresponding to subtypes
-     */
-    std::vector<Term *> cases;
-  };
+	struct Desum : public Term {
+		/*
+		the terms corresponding to subtypes
+		*/
+		std::vector<Term *> cases;
+	};
 
-  struct Deproduct : public Term {
-    std::string x, y;
-    Term *term;
-  };
+	struct Deproduct : public Term {
+		std::string x, y;
+		Term *term;
+	};
 }
 

@@ -1,9 +1,24 @@
 #include "../include/ast.hpp"
 
+ast::Type::~Type(){}
 
 ast::PrimitiveType::PrimitiveType(const std::string& name)
 	:name(name)
 {
+}
+
+ast::ProductType::ProductType(Type *x, Type *y, std::string cons)
+	: x(x), y(y), cons(cons)
+{
+}
+
+ast::ProductType::~ProductType(){
+	if (x != NULL && ((PrimitiveType*)x) == NULL){	// prevent duplicate delete
+		delete x;
+	}
+	if (y != NULL && ((PrimitiveType*)y) == NULL){
+		delete y;
+	}
 }
 
 ast::FunctionType::FunctionType(Type *left, Type *right)
@@ -19,6 +34,8 @@ ast::FunctionType::~FunctionType(){
 		delete right;
 	}
 }
+
+ast::Term::~Term(){}
 
 ast::Reference::Reference(const std::string name) 
 	:name(name)

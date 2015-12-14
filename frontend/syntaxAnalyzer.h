@@ -21,8 +21,10 @@ private:
 	ast::Term* buildTerm(TokenStream& stream);
 	ast::Term* buildExpr(TokenStream& stream);
 	ast::Term* buildSimExpr(TokenStream& stream);
-	ast::Application* buildMatchExpr(TokenStream& stream);
+	ast::Term* buildMatchExpr(TokenStream& stream);
 	ast::Term* buildChoice(TokenStream& stream);
+
+	ast::Type* getType(const std::string&);
 
 	ast::Term* root;
 	map<string, ast::Type*> types;

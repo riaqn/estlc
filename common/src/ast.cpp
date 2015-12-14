@@ -67,6 +67,14 @@ ast::Application::~Application(){
   }
 }
 
+Desum::Desum(const Term *sum, std::vector<std::pair<const std::string, const Term *> > &cases)
+  :sum(sum), cases(cases)
+{}
+
+Deproduct::Deproduct(const Term *const product, std::vector<std::string> &names, const Term *const term)
+  :product(product), names(names), term(term)
+{}
+   
 Program::Program(const std::vector<const Type *> types, const Term *term)
   :types(types), term(term)
 {}

@@ -5,6 +5,7 @@ SyntaxAnalyzer::SyntaxAnalyzer(TokenStream& stream)
 {
 	stream.initIter();
 	root = buildBlock(stream);
+
 }
 
 SyntaxAnalyzer::~SyntaxAnalyzer()
@@ -15,6 +16,14 @@ SyntaxAnalyzer::~SyntaxAnalyzer()
 	for (map<string, ast::Type*>::iterator it = types.begin(); it != types.end(); it++){
 		delete it->second;
 	}
+}
+
+ast::Program* SyntaxAnalyzer::getProgram()const{
+	std::vector<const ast::Type*> vec;
+	for (std::map<std::string, ast::Type*>::const_iterator it = types.begin(); it != types.end(); it++) {
+		vec.push_back(it->second);
+	}
+	return new ast::Program((const std::vector<const ast::Type *>)vec, root);
 }
 
 ast::Type* SyntaxAnalyzer::getType(const string& s){
@@ -49,8 +58,7 @@ void SyntaxAnalyzer::buildTypeDef(TokenStream& stream){
 		throw syntax_error(token.name, token.line, "Should be an ID");
 	}
 	string typeId = token.name;
-	ast::SumType* sumType = new ast::SumType();
-	types[typeId] = sumType;
+	types[typeId] = NULL;
 
 	token = stream.next();
 	if (token.type == Token::COLON){
@@ -65,6 +73,7 @@ void SyntaxAnalyzer::buildTypeDef(TokenStream& stream){
 	if (token.type != Token::OR){
 		throw syntax_error(token.name, token.line, "Should be '|'");
 	}
+	std::vector<std::pair<const ast::Type*, const std::string>> sumTypes;
 	do{
 		token = stream.next();
 		if (token.type != Token::ID && token.type != Token::NIL){
@@ -111,7 +120,12 @@ void SyntaxAnalyzer::buildTypeDef(TokenStream& stream){
 		token = stream.next();			// if '|', go on, else stop
 	} while (token.type == Token::OR);
 	stream.back();		// put back the token
-	// do something with the type
+
+	types[typeId] = new ast::SumType(sumTypes);
+}
+
+ast::Type* SyntaxAnalyzer::buildProductType(TokenStream& stream){
+
 }
 
 // return a type, possible primitive or algebraic or production of them

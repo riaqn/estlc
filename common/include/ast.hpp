@@ -22,9 +22,9 @@ namespace ast{
   };
   
   struct ProductType : public Type {
-    const Type *x, *y;
     const std::string cons;
-    ProductType(const Type *const x, const Type *const y, const std::string &cons);
+    const std::vector<const Type *> types;
+    ProductType(const std::vector<const Type *> &types, const std::string &cons);
   };
 
   struct FunctionType : public Type {

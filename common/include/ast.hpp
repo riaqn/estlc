@@ -67,7 +67,7 @@ namespace ast{
 
   struct Deproduct : public Term {
     const Term *product;
-    const std::string x, y;
+    const std::vector<const std::string> names;
     const Term *term;
   };
 

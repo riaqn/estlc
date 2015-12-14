@@ -8,14 +8,12 @@ Type::~Type() {}
 Term::~Term() {}
 
 
-ProductType::ProductType(const ast::Type *x, const ast::Type *y, const std::string &cons)
-  :x(x), y(y), cons(cons)
+ProductType::ProductType(const std::vector<const Type *> &types, const std::string &cons)
+  :types(types), cons(cons)
 {}
 
 SumType::SumType(std::vector<std::pair<const Type *, const std::string> > &types)
   :types(types) {}
-   
-
 
 PrimitiveType::PrimitiveType(const std::string& name)
   :name(name)

@@ -79,14 +79,13 @@ void SyntaxAnalyzer::buildTypeDef(TokenStream& stream){
 		if (token.type != Token::ID && token.type != Token::NIL){
 			throw syntax_error(token.name, token.line, "Expected nil or identifier");
 		}
-		std::pair<ast::Type*, std::string> pair = { NULL, token.name };
+		string cons = token.name;
 
 		token = stream.next();
 		if (token.type != Token::COLON){
 			throw syntax_error(token.name, token.line, "Should be ':'");
 		}
-
-		ast::Type** curr = &(pair.first);
+		std::vector<const ast::Type *> productTypes;
 		string arg;
 		while (true){
 			token = stream.next();	// type id

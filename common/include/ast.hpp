@@ -63,12 +63,14 @@ namespace ast{
     */
     const Term *sum;
     std::vector<std::pair<const std::string, const Term *> > cases;
+    Desum(const Term *sum, std::vector<std::pair<const std::string, const Term *> > &cases);
   };
 
   struct Deproduct : public Term {
     const Term *product;
-    const std::string x, y;
+    std::vector<std::string> names;
     const Term *term;
+    Deproduct(const Term *const product, std::vector<std::string> &names, const Term *const term);
   };
 
   struct Program {

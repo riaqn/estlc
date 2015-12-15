@@ -37,11 +37,14 @@ public:
   Term generate(const ast::Desum *const des, Env<llvm::APInt> &env);
   Term generate(const ast::SumType *sum, const uint32_t idx);
   Term generate(const ast::ProductType *product);
-
-
   Term generate(const ast::Program &prog);
+  
   void generatePush(llvm::Value *const value, llvm::Value *&stack);
   llvm::LoadInst *generatePop(llvm::Type *type, llvm::Value *&stack);
-  llvm::CallInst *generateMalloc(llvm::Type *type);
+  llvm::Value *generateMalloc(llvm::Type *type);
+  llvm::Value *generateMalloc(llvm::Value *size);
+
+  llvm::Value *generateClosure(llvm::Value *func, llvm::Value *stack);
+
   void dump();
 };

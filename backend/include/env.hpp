@@ -9,8 +9,8 @@ template<typename ptr_t>
 class Env {
 public:
   class NotFound : public std::exception {};
-  
-  ptr_t push(const std::string &name, const ast::Type *const type, const ptr_t size);
+  Env(const ptr_t &base);
+  ptr_t push(const std::string &name, const ast::Type *const type, const ptr_t &size);
   std::tuple<const std::string, const ptr_t, const ast::Type *> pop();
   std::pair<const ptr_t , const ast::Type *> find(const std::string &name);
   ptr_t size();
@@ -20,8 +20,12 @@ private:
 };
 
 template<typename ptr_t>
-ptr_t Env<ptr_t>::push(const std::string &name, const ast::Type *type, const ptr_t size) {
-  stack_.push_back(std::make_tuple(name, size_, type));
+Env<ptr_t>::Env(const ptr_t &base)
+  :size_(base) {}
+   
+template<typename ptr_t>
+ptr_t Env<ptr_t>::push(const std::string &name, const ast::Type *type, const ptr_t &size) {
+  stack_.push_back(std::make_tuple(name, size, type));
   size_ += size;
   return std::get<1>(stack_.back());
 }
@@ -35,9 +39,11 @@ std::tuple<const std::string, const ptr_t, const ast::Type *> Env<ptr_t>::pop() 
 
 template<typename ptr_t>
 std::pair<const ptr_t, const ast::Type *> Env<ptr_t>::find(const std::string &name) {
+  ptr_t size = size_;
   for (auto i = stack_.rbegin(); i != stack_.rend(); ++i) {
+    size -= std::get<1>(*i);
     if (std::get<0>(*i) == name)
-      return std::make_pair(std::get<1>(*i), std::get<2>(*i));
+      return std::make_pair(size, std::get<2>(*i));
   }
   throw NotFound();
 }

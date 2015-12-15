@@ -24,7 +24,10 @@ Type *list_int();
 Type *list_int_y(const Type *list_int) {
   static Type *type = NULL;
   if (type == NULL) {
-    type = new ProductType(int0(), list_int, "list_int_y_cons");
+    std::vector<const Type *> types;
+    types.push_back(int0());
+    types.push_back(list_int);
+    type = new ProductType(types, "int -> list_int -> list_int");
   }
   return type;
 }
@@ -34,10 +37,10 @@ Type *list_int() {
   if (type == NULL) {
     std::vector<std::pair<const Type *, const std::string> > types;
 
-    types.push_back(std::make_pair(unit(), "unit2list_int"));
-    types.push_back(std::make_pair(list_int_y(NULL), "list_int_y2list_int"));
+    types.push_back(std::make_pair(unit(), "unit -> list_int"));
+    types.push_back(std::make_pair(list_int_y(NULL), "list_int_y -> list_int"));
     type = new SumType(types);
-    ((ProductType *)type->types[1].first)->y = type;
+    ((ProductType *)type->types[1].first)->types[1] = type;
   }
   return type;
 }
@@ -54,6 +57,7 @@ int main() {
 
   Codegen codegen;
   Codegen::Term v = codegen.generate(program);
+  (void)v;
 
   codegen.dump();
 }

@@ -23,8 +23,8 @@ namespace ast{
   
   struct ProductType : public Type {
     const std::string cons;
-    const std::vector<const Type *> types;
-    ProductType(const std::vector<const Type *> &types, const std::string &cons);
+    std::vector<const Type *> types;
+    ProductType(std::vector<const Type *> &types, const std::string &cons);
   };
 
   struct FunctionType : public Type {
@@ -71,6 +71,12 @@ namespace ast{
     std::vector<std::string> names;
     const Term *term;
     Deproduct(const Term *const product, std::vector<std::string> &names, const Term *const term);
+  };
+
+  struct Fixpoint : public Term {
+    //this term must has type A->A
+    const Term *term;
+    Fixpoint(const Term *term);
   };
 
   struct Program {

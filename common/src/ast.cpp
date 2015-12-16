@@ -8,7 +8,7 @@ Type::~Type() {}
 Term::~Term() {}
 
 
-ProductType::ProductType(const std::vector<const Type *> &types, const std::string &cons)
+ProductType::ProductType(std::vector<const Type *> &types, const std::string &cons)
   :types(types), cons(cons)
 {}
 
@@ -73,6 +73,10 @@ Desum::Desum(const Term *sum, std::vector<std::pair<const std::string, const Ter
 
 Deproduct::Deproduct(const Term *const product, std::vector<std::string> &names, const Term *const term)
   :product(product), names(names), term(term)
+{}
+
+Fixpoint::Fixpoint(const Term *term)
+  :term(term)
 {}
    
 Program::Program(const std::vector<const Type *> types, const Term *term)

@@ -29,7 +29,6 @@
 
 /ar-lib
 /compile
-/compile_commands.json
 /config.guess
 /config.sub
 /depcomp

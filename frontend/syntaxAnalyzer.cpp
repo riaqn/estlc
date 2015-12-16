@@ -181,8 +181,9 @@ ast::Term* SyntaxAnalyzer::buildFuncDef(TokenStream& stream){
 		term = new ast::Abstraction(ids[i], tps[i], term);
 	}
 	ast::Abstraction* func = new ast::Abstraction(funcId, type, buildBlock(stream));
+	term = new ast::Abstraction(funcId, type, term);
 
-	return new ast::Application(func, term);
+	return new ast::Application(func, new ast::Fixpoint(term));
 }
 
 ast::Term* SyntaxAnalyzer::buildFuncDesig(TokenStream& stream){

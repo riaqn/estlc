@@ -7,3 +7,7 @@ SUBDIRS = src .
 noinst_LTLIBRARIES = libbackend.la
 libbackend_la_SOURCES = 
 libbackend_la_LIBADD = src/libbackend.la
+
+.PHONY: src/libbackend.la
+src/libbackend.la :
+	$(MAKE) -C src libbackend.la

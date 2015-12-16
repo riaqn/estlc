@@ -160,8 +160,10 @@ Codegen::Term Codegen::generate(const ast::Deproduct *const dep, Env<APInt> &env
   
   CallInst *p = builder.CreateCall(product.value, stack);
   Value *p_c = builder.CreateBitCast(p, PointerType::get(productType, 0));
+  Value *index[2] = {ConstantInt::get(context, APInt(32, 0))};
   for (size_t i = 0; i < n; ++i) {
-    Value *v_p = builder.CreateGEP(p_c, ConstantInt::get(context, APInt(64, i)));
+    index[1] = ConstantInt::get(context, APInt(32, i));
+    Value *v_p = builder.CreateGEP(p_c, index);
     Value *v = builder.CreateLoad(refType, v_p);
     generatePush(v, stack);
   }
@@ -198,45 +200,38 @@ Codegen::Term Codegen::generate(const ast::Desum *const des, Env<APInt> &env) {
       throw TypeNotMatch(TermException(pair.second, term.type), termtype);
   }
 
-  Constant *jt = ConstantArray::get(ArrayType::get(funcType, n), consts);
+  
+  Constant *jt = ConstantVector::get(consts);
 
-  FunctionType *ft = FunctionType::get(refType, argsType, false);
-  Function *f = Function::Create(ft, Function::ExternalLinkage, "", module);
-  BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "", f);
+  Function *f = Function::Create(funcType, Function::ExternalLinkage, "", module);
+  BasicBlock *bb = BasicBlock::Create(context, "", f);
   builder.SetInsertPoint(bb);
 
-  std::vector<Value *> args;
-  for (auto &i : f->args())
-    args.push_back(&i);
-  CallInst *call = builder.CreateCall(sum.value, args);
+  Value *stack = f->arg_begin();
+
+  CallInst *call = builder.CreateCall(sum.value, {stack});
+  Value *value = builder.CreateBitCast(call, PointerType::get(sumType, 0));
 
   //read the first 4 bytes of index
-  LoadInst *idx = builder.CreateLoad(IntegerType::get(context, layout.getTypeAllocSize(indexType)),
-                                     call);
+  Value *index[2];
+  index[0] = ConstantInt::get(context, APInt(32, 0));
+  index[1] = ConstantInt::get(context, APInt(32, 0));
+  Value *idx_p = builder.CreateGEP(value, index);
+  index[1] = ConstantInt::get(context, APInt(32, 1));
+  Value *ref_p = builder.CreateGEP(value, index);
 
-  //multiply it with the length of function pointer
-  Value *offset = builder.CreateMul(idx, ConstantInt::get(IntegerType::get(getGlobalContext(), 64), layout.getTypeAllocSize(funcType)));
-
-  //add it to the jumptable
-  Value *addr = builder.CreateAdd(jt, offset);
+  Value *idx = builder.CreateLoad(indexType, idx_p);
+  Value *ref = builder.CreateLoad(refType, ref_p);
 
   //read the function pointer
-  LoadInst *func = builder.CreateLoad(funcType, addr);
+  Value *func = builder.CreateExtractElement(jt, idx);
 
   //call it.
 
-  //first we calculate the address of the remnant,
-  // aka, the sub type data
-  Value *remnant = builder.CreateAdd(call, ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(indexType))));
-  
   //then we push the remainer into the stack
-  Value *stack = f->arg_begin();
-  (void)builder.CreateStore(remnant, stack);
-  stack = builder.CreateAdd(stack, ConstantInt::get(getGlobalContext(), APInt(64, layout.getTypeAllocSize(remnant->getType()))));
+  generatePush(ref, stack);
     
-  args.clear();
-  args.push_back(stack);
-  CallInst *casecall = builder.CreateCall(func, args);
+  CallInst *casecall = builder.CreateCall(func, {stack});
   builder.CreateRet(casecall);
   verifyFunction(*f);
 
@@ -480,7 +475,6 @@ Codegen::Term Codegen::generate(const ast::ProductType *const product) {
   
   return Term{f0, type};
 }
-
 
 void Codegen::dump() {
   module->dump();

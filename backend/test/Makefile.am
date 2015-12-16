@@ -7,8 +7,9 @@ AM_CXXFLAGS += `llvm-config --cxxflags`
 
 LDADD = $(COMMONDIR)/libcommon.la ../libbackend.la
 
-noinst_PROGRAMS = test0.out
-test0_out_SOURCES = test0.cpp
+noinst_PROGRAMS = id.out cdr.out
+id_out_SOURCES = id.cpp
+cdr_out_SOURCES = cdr.cpp
 
 all : $(patsubst %.cpp,ll/%.out,$(wildcard *.cpp))
 

@@ -2,15 +2,32 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <exception>
 
 namespace ast{
+  class Exception : public std::exception {
+  };
+
+  struct PrimitiveType;
+  struct SumType;
+  struct ProductType;
+  struct FunctionType;
+  
   struct Type {
     virtual ~Type() = 0;
+    virtual bool operator ==(const Type &b) const;
+    virtual bool operator ==(const PrimitiveType &b) const;
+    virtual bool operator ==(const SumType &b) const;
+    virtual bool operator ==(const ProductType &b) const;
+    virtual bool operator ==(const FunctionType &b) const;
+    
+    virtual bool operator !=(const Type &b) const;
   };
 
   struct PrimitiveType : public Type {
     const std::string name;
     PrimitiveType(const std::string& name);
+    virtual bool operator ==(const PrimitiveType &b) const;
   };
 
   struct SumType : public Type {
@@ -18,22 +35,26 @@ namespace ast{
        pair is the type and the converter from subtypes to supertype
     */
     std::vector<std::pair<const Type *, const std::string> > types;
-    SumType(std::vector<std::pair<const Type *, const std::string> > &);
+    SumType(const std::vector<std::pair<const Type *, const std::string> > &);
+    bool operator==(const SumType &b) const;
   };
   
   struct ProductType : public Type {
     const std::string cons;
     std::vector<const Type *> types;
-    ProductType(std::vector<const Type *> &types, const std::string &cons);
+    ProductType(const std::vector<const Type *> &types, const std::string &cons);
+    bool operator==(const ProductType &b) const;
   };
 
   struct FunctionType : public Type {
     const Type *left, *right;
     FunctionType(const Type *const left, const Type *const right);
     ~FunctionType();
+    bool operator==(const FunctionType &b) const;
   };
 
   struct Term {
+    unsigned nrow, ncol;
     virtual ~Term() = 0;
   };
 
@@ -63,14 +84,14 @@ namespace ast{
     */
     const Term *sum;
     std::vector<std::pair<const std::string, const Term *> > cases;
-    Desum(const Term *sum, std::vector<std::pair<const std::string, const Term *> > &cases);
+    Desum(const Term *sum, const std::vector<std::pair<const std::string, const Term *> > &cases);
   };
 
   struct Deproduct : public Term {
     const Term *product;
     std::vector<std::string> names;
     const Term *term;
-    Deproduct(const Term *const product, std::vector<std::string> &names, const Term *const term);
+    Deproduct(const Term *const product, const std::vector<std::string> &names, const Term *const term);
   };
 
   struct Fixpoint : public Term {
@@ -80,7 +101,7 @@ namespace ast{
   };
 
   struct Program {
-    const std::vector<const Type *> types;
+    std::vector<const Type *> types;
     const Term *term;
     Program(const std::vector<const Type *> types, const Term *term);
   };

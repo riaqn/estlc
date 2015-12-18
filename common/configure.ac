@@ -21,6 +21,7 @@ LT_INIT
 # Checks for typedefs, structures, and compiler characteristics.
 
 # Checks for library functions.
+AC_SUBST([AM_CXXFLAGS], ["-std=c++11"])
 
 AC_CONFIG_FILES([Makefile
                  include/Makefile

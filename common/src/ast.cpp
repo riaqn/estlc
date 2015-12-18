@@ -1,13 +1,16 @@
 #include <ast.hpp>
+#include <debug.hpp>
 
 using namespace ast;
 
+Debug<LEVEL_DEBUG> debug;
 
 Type::~Type() {}
 
 Term::~Term() {}
 
 bool Type::operator ==(const Type &b) const {
+  debug << "type " << this << " == " << &b << "\n";
   if (const PrimitiveType *prim = dynamic_cast<const PrimitiveType *>(&b))
     return *this == *prim;
   else if (const ProductType *prod = dynamic_cast<const ProductType *>(&b))
@@ -38,11 +41,46 @@ bool ProductType::operator==(const ProductType &b) const {
   return this == &b;
 }
 
+std::string ProductType::to_string() const {
+  std::string str = "product";
+  str += "@" + std::to_string((long)this);
+  /*
+  str += '(';
+  
+
+  for (auto type : types) {
+    str += type->to_string();
+    str += ',';
+  }
+
+  str += ')';
+  */
+  return str;
+}
+
 SumType::SumType(const std::vector<std::pair<const Type *, const std::string> > &types)
   :types(types) {}
 
 bool SumType::operator==(const SumType &b) const {
   return this == &b;
+}
+
+std::string SumType::to_string() const {
+  std::string str = "sum";
+  
+  str += "@" + std::to_string((long)this);
+  /*
+  str += '(';
+
+  for (auto type : types) {
+    str += type.first->to_string();
+    str += ':';
+    str += type.second;
+    str += ',';
+    }
+  str += ')';
+  */
+  return str;
 }
 
 PrimitiveType::PrimitiveType(const std::string& name)
@@ -51,6 +89,10 @@ PrimitiveType::PrimitiveType(const std::string& name)
 
 bool PrimitiveType::operator ==(const PrimitiveType &b) const {
   return name == b.name;
+}
+
+std::string PrimitiveType::to_string() const {
+  return name;
 }
 
 ast::FunctionType::FunctionType(const Type *const left, const Type *const right)
@@ -68,7 +110,12 @@ ast::FunctionType::~FunctionType(){
 }
 
 bool FunctionType::operator==(const FunctionType &b) const {
+  debug << "func " << this << "==" << &b << "\n";
   return (*left == *b.left) && (*right == *b.right);
+}
+
+std::string FunctionType::to_string() const {
+  return left->to_string() + "->" + right->to_string();
 }
 
 ast::Reference::Reference(const std::string &name) 

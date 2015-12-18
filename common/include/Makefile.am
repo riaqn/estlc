@@ -1,1 +1,1 @@
-noinst_HEADERS = ast.hpp
+noinst_HEADERS = ast.hpp debug.hpp

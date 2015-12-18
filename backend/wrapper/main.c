@@ -43,7 +43,7 @@ int main() {
   struct list_nat *l = (struct list_nat *)umain(arg);
   while (l->idx != 0) {
     struct list_nat_y *y = (struct list_nat_y *)l->y;
-    printf("%u ", *(y->x));
+    printf("%p %u\n", y->x, *(y->x));
     l = y->next;
   }
   printf("\n");

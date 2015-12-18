@@ -3,6 +3,7 @@
 #include <ast.hpp>
 #include <vector>
 #include <memory>
+#include <utility>
 
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
@@ -19,7 +20,8 @@ private:
   llvm::DataLayout layout;
 
   std::vector<llvm::Type *> argsType;
-  llvm::Type  *refType, *productType, *indexType, *sumType, *closureType, *stackType;
+  llvm::Type  *refType, *productType, *indexType, *sumType, *closureType;
+  llvm::PointerType *PclosureType, *PfuncType, *stackType;
   llvm::FunctionType *funcType;
 
 
@@ -35,16 +37,21 @@ public:
   Term generate(const ast::Reference *const ref, Env<llvm::APInt> &env);
   Term generate(const ast::Deproduct *const dep, Env<llvm::APInt> &env);
   Term generate(const ast::Desum *const des, Env<llvm::APInt> &env);
+  Term generate(const ast::Fixpoint *const fix, Env<llvm::APInt> &env);
   Term generate(const ast::SumType *sum, const uint32_t idx);
   Term generate(const ast::ProductType *product);
+
   Term generate(const ast::Program &prog);
   
   void generatePush(llvm::Value *const value, llvm::Value *&stack);
   llvm::LoadInst *generatePop(llvm::Type *type, llvm::Value *&stack);
+  llvm::Value *generateEval(llvm::Value *eval, llvm::Value *stack);
   llvm::Value *generateMalloc(llvm::Type *type);
   llvm::Value *generateMalloc(llvm::Value *size);
-
+  llvm::Value *generatePrintf(const char *const fmt, llvm::Value *val);
   llvm::Value *generateClosure(llvm::Value *func, llvm::Value *stack);
+  llvm::Value *generateLoad(llvm::Type *type, llvm::Value *ptr);
+  std::pair<llvm::Value *, llvm::Value *> generateDeclosure(llvm::Value *clo);
 
   void dump();
 };

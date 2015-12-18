@@ -4,6 +4,9 @@
 #include <llvm/IR/Verifier.h>
 #include <llvm/IR/Function.h>
 
+#include <cstdarg>
+#include <debug.hpp>
+
 #include <iostream>
 
 using namespace llvm;
@@ -13,6 +16,7 @@ Codegen::Codegen()
     module(new Module("", context)),
     builder(context),
     layout(module) {
+  module->setTargetTriple("x86_64-pc-linux-gnu");
 
   refType = PointerType::get(IntegerType::get(context, 8), 0);
 
@@ -32,11 +36,14 @@ Codegen::Codegen()
   elems.clear();
   elems.push_back(stackType);
   funcType = FunctionType::get(refType, elems, false);
+  PfuncType = PointerType::get(funcType, 0);
   
   elems.clear();
   elems.push_back(PointerType::get(funcType, 0));
   elems.push_back(stackType);
   closureType = StructType::get(context, elems);
+
+  PclosureType = PointerType::get(closureType, 0);
     }
 
 Codegen::Term Codegen::generate(const ast::Term *term, Env<APInt> &env) {
@@ -50,8 +57,10 @@ Codegen::Term Codegen::generate(const ast::Term *term, Env<APInt> &env) {
     return generate(des, env);
   else if (const ast::Deproduct *dep = dynamic_cast<const ast::Deproduct *>(term))
     return generate(dep, env);
+  else if (const ast::Fixpoint *fix = dynamic_cast<const ast::Fixpoint *>(term))
+    return generate(fix, env);
   else
-    throw ClassNotMatch(TermException(term, new ast::PrimitiveType("WTF")), typeid(ast::Term));
+    throw TermNotMatch(term, typeid(ast::Term));
 }
 
 Codegen::Term Codegen::generate(const ast::Application *app, Env<APInt> &env) {
@@ -62,25 +71,26 @@ Codegen::Term Codegen::generate(const ast::Application *app, Env<APInt> &env) {
   const ast::FunctionType *func_type = static_cast<const ast::FunctionType *>(func.type);
   if (func_type == NULL)
     throw ClassNotMatch(TermException(app->func, func.type), typeid(ast::FunctionType));
-  if (func_type->left != arg.type)
+  if (*func_type->left != *arg.type)
     throw TypeNotMatch(TermException(app->arg, arg.type), func_type->left);
 
-  Function *f = Function::Create(funcType, Function::ExternalLinkage, "", module);
+  Function *f = Function::Create(funcType, Function::ExternalLinkage, func_type->to_string(), module);
   BasicBlock *bb = BasicBlock::Create(context, "", f);
   builder.SetInsertPoint(bb);
-  
-  Value *args[1] = {f->arg_begin()};
-  CallInst *call0 = builder.CreateCall(func.value, args);
-  Value *call1 = builder.CreateCall(arg.value, args);
 
-  Value *func_p = builder.CreateLoad(funcType, call0);
-  Value *stack_p = builder.CreateAdd(call0, ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(funcType))));
-  Value *stack = builder.CreateLoad(stackType, stack_p);
+  Value *stack = f->arg_begin();
 
-  generatePush(call1, stack);
+  Value *call0 = generateEval(func.value, stack);
+  generatePrintf("call0 = %p\n", call0);
+  Value *call1 = generateEval(arg.value, stack);
 
-  Value *args0[1] = {stack};
-  CallInst *call = builder.CreateCall(func_p, args0);
+  auto pair = generateDeclosure(call0);
+  Value *func0 = pair.first;
+  Value *stack0 = pair.second;
+
+  generatePush(call1, stack0);
+
+  CallInst *call = builder.CreateCall(func0, {stack0});
 
   builder.CreateRet(call);
 
@@ -89,7 +99,7 @@ Codegen::Term Codegen::generate(const ast::Application *app, Env<APInt> &env) {
 }
 
 Codegen::Term Codegen::generate(const ast::Reference *ref, Env<APInt> &env) {
-  Function *f = Function::Create(funcType, Function::ExternalLinkage, ref->name, module);
+  Function *f = Function::Create(funcType, Function::ExternalLinkage, "ref " + ref->name, module);
   BasicBlock *bb = BasicBlock::Create(context, "", f);
   builder.SetInsertPoint(bb);
 
@@ -113,25 +123,15 @@ Codegen::Term Codegen::generate(const ast::Abstraction *const abs, Env<APInt> &e
   Function *f = Function::Create(funcType, Function::ExternalLinkage, "abs " + abs->arg, module);
   BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "", f);
   builder.SetInsertPoint(bb);
-  Value *m = generateMalloc(closureType);
-  std::vector<Value *> idx;
-  idx.push_back(ConstantInt::get(context, APInt(32, 0)));
-  idx.push_back(ConstantInt::get(context, APInt(32, 0)));
-  Value *func_p = builder.CreateGEP(m, idx);
-  builder.CreateStore(term.value, func_p);
+  Value *stack = f->arg_begin();
+  Value *clo = generateClosure(term.value, stack);
 
-  idx.clear();
-  idx.push_back(ConstantInt::get(context, APInt(32, 0)));
-  idx.push_back(ConstantInt::get(context, APInt(32, 1)));
-  Value *stack_p = builder.CreateGEP(m, idx);
-  builder.CreateStore(f->arg_begin(), stack_p);
-
-  Value *m_c = builder.CreateBitCast(m, refType);
-  builder.CreateRet(m_c);
+  Value *clo_c = builder.CreateBitCast(clo, refType);
+  builder.CreateRet(clo_c);
   verifyFunction(*f);
   return Term{f, new ast::FunctionType(abs->type, term.type)};
-}
 
+}
 Codegen::Term Codegen::generate(const ast::Deproduct *const dep, Env<APInt> &env) {
 
   Term product = generate(dep->product, env);
@@ -196,21 +196,23 @@ Codegen::Term Codegen::generate(const ast::Desum *const des, Env<APInt> &env) {
     consts.push_back(term.value);
     if (termtype == NULL)
       termtype = term.type;
-    else if (termtype != term.type)
+    else if (*termtype != *term.type)
       throw TypeNotMatch(TermException(pair.second, term.type), termtype);
   }
 
   
   Constant *jt = ConstantVector::get(consts);
 
-  Function *f = Function::Create(funcType, Function::ExternalLinkage, "", module);
+  Function *f = Function::Create(funcType, Function::ExternalLinkage, "desum ", module);
   BasicBlock *bb = BasicBlock::Create(context, "", f);
   builder.SetInsertPoint(bb);
+
 
   Value *stack = f->arg_begin();
 
   CallInst *call = builder.CreateCall(sum.value, {stack});
   Value *value = builder.CreateBitCast(call, PointerType::get(sumType, 0));
+  generatePrintf("begin Desum [%p]\n", value);
 
   //read the first 4 bytes of index
   Value *index[2];
@@ -240,6 +242,8 @@ Codegen::Term Codegen::generate(const ast::Desum *const des, Env<APInt> &env) {
 
 void Codegen::generatePush(Value *const value, Value *&stack) {
   Value *stack_c = builder.CreateBitCast(stack, PointerType::get(value->getType(), 0));
+  generatePrintf("Store [%p] ", stack_c);
+  generatePrintf("= %p\n", value);
   (void)builder.CreateStore(value, stack_c);
   stack = builder.CreateInBoundsGEP(stack, ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(value->getType()))));
 }
@@ -280,6 +284,7 @@ Codegen::Term Codegen::generate(const ast::Program &prog) {
     } else {
       throw TypeException(type);
     }
+
   }
 
 
@@ -292,8 +297,10 @@ Codegen::Term Codegen::generate(const ast::Program &prog) {
 
   Value *stack = generateMalloc(ConstantInt::get(context, APInt(64, 4096)));
   for (auto term : funcs) {
-    Value *args[1] = {stack};
-    Value *clo = builder.CreateCall(term.value, args);
+    // call the functions that will generator constructor for us.
+    // the arg is NULL, since the process generating constructor does
+    // not need any other informations.
+    Value *clo = builder.CreateCall(term.value, ConstantPointerNull::get(stackType));
     generatePush(clo, stack);
   }
   
@@ -302,15 +309,9 @@ Codegen::Term Codegen::generate(const ast::Program &prog) {
   const ast::FunctionType *type = dynamic_cast<const ast::FunctionType *>(term.type);
   if (type == NULL)
     throw new ClassNotMatch(TermException(prog.term, term.type), typeid(ast::FunctionType));
-  Value *clo = builder.CreateBitCast(call, PointerType::get(closureType, 0));
-  Value *idx[2];
-  idx[0] = ConstantInt::get(context, APInt(32, 0));
-  idx[1] = ConstantInt::get(context, APInt(32, 0));
-  Value *func_p = builder.CreateGEP(clo, idx);
-  idx[1] = ConstantInt::get(context, APInt(32, 1));
-  Value *stack_p = builder.CreateGEP(clo, idx);
-  Value *func0 = builder.CreateLoad(PointerType::get(funcType, 0), func_p);
-  Value *stack0 = builder.CreateLoad(stackType, stack_p);
+  auto pair = generateDeclosure(call);
+  Value *func0 = pair.first;
+  Value *stack0 = pair.second;
   
   generatePush(arg, stack0);
   Value *ret = builder.CreateCall(func0, {stack0});
@@ -349,13 +350,11 @@ Codegen::Term Codegen::generate(const ast::SumType *sum, const uint32_t idx) {
     verifyFunction(*f);
   }
 
-  Function *f0 = Function::Create(funcType, Function::ExternalLinkage, "", module);
+  Function *f0 = Function::Create(funcType, Function::ExternalLinkage, "ret " + sum->types[idx].second, module);
   BasicBlock *bb = BasicBlock::Create(context, "", f0);
   builder.SetInsertPoint(bb);
   
 
-  //FIXME: we assume stack space needed for two arguments is smaller
-  //than the sumtype
   Value *stack = generateMalloc(refType);
   Value *stack_c = builder.CreateBitCast(stack, refType);
 
@@ -371,6 +370,7 @@ Codegen::Term Codegen::generate(const ast::SumType *sum, const uint32_t idx) {
 }
 
 Value *Codegen::generateMalloc(Value *size) {
+  generatePrintf("begin Malloc for size %u\n", size);
   static Function *malloc = NULL;
   if (malloc == NULL) {
     std::vector<Type*> types(1, IntegerType::get(context, 64));
@@ -379,16 +379,21 @@ Value *Codegen::generateMalloc(Value *size) {
   }
   Value *args[1] = {size};
   CallInst *call = builder.CreateCall(malloc, args);
+  generatePrintf("end Malloc = %p\n", call);
   return call;
 
 }
 
 Value *Codegen::generateMalloc(Type *type) {
+  generatePrintf("begin Malloc for type\n", ConstantPointerNull::get(stackType));
   Value *m = generateMalloc(ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(type))));
+  generatePrintf("end Malloc = %p\n", m);
   return builder.CreateBitCast(m, PointerType::get(type, 0));  
 }
 
 Value *Codegen::generateClosure(Value *func, Value *stack) {
+  generatePrintf("begin Clo [%p] ", func);
+  generatePrintf("[%p]\n", stack);
   Value *m = generateMalloc(closureType);
   std::vector<Value *> idx;
   idx.push_back(ConstantInt::get(context, APInt(32, 0)));
@@ -402,16 +407,19 @@ Value *Codegen::generateClosure(Value *func, Value *stack) {
 
   builder.CreateStore(func, func_p);
   builder.CreateStore(stack, stack_p);
+  //normally we want a refType
+  Value *m_c = builder.CreateBitCast(m, refType);
 
-  return m;
+  generatePrintf("end Clo [%p]\n", m);
+  return m_c;
 }
 
 Codegen::Term Codegen::generate(const ast::ProductType *const product) {
   Env<APInt> env(APInt(layout.getTypeAllocSizeInBits(refType), 0));
-  unsigned i = 0;
+  size_t n = product->types.size();
   std::vector<Type *> elems;
-  for (auto type : product->types) {
-    env.push(std::to_string(i++), type, APInt(64, layout.getTypeAllocSize(refType)));
+  for (unsigned i = 0; i < n; ++i) {
+    env.push(std::to_string(i), product->types[i], APInt(64, layout.getTypeAllocSize(refType)));
     elems.push_back(refType);
   }
 
@@ -419,7 +427,7 @@ Codegen::Term Codegen::generate(const ast::ProductType *const product) {
   Function *f = Function::Create(funcType, Function::ExternalLinkage, product->cons, module);
   const ast::Type *type = product;
   {
-    BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "", f);
+    BasicBlock *bb = BasicBlock::Create(context, "", f);
     builder.SetInsertPoint(bb);
 
     Type *productType = StructType::get(context, elems);
@@ -427,7 +435,7 @@ Codegen::Term Codegen::generate(const ast::ProductType *const product) {
     Value *m = generateMalloc(productType);
     Value *stack = f->arg_begin();
 
-    for (int i = product->types.size() - 1; i >= 0; --i) {
+    for (int i = n - 1; i >=0; --i) {
       type = new ast::FunctionType(product->types[i], type);
       //calculate the address in m
     
@@ -437,7 +445,9 @@ Codegen::Term Codegen::generate(const ast::ProductType *const product) {
       Value *p = builder.CreateGEP(m, idx);
 
       //get the value from the stack
-      Value *v = generatePop(refType, stack);
+      Value *v_p = builder.CreateGEP(stack, ConstantInt::get(context, env.find(std::to_string(i)).first - env.size()));
+      Value *v_p_c = builder.CreateBitCast(v_p, PointerType::get(refType, 0));
+      Value *v = generateLoad(refType, v_p_c);
 
       //store the value to the m
       builder.CreateStore(v, p);
@@ -450,31 +460,143 @@ Codegen::Term Codegen::generate(const ast::ProductType *const product) {
 
   /* now we will generate a serialize of useless function to be
      friendly to other components */
-  for (auto i = product->types.size() - 1; i > 0; --i) {
+  for (auto i = n - 1; i > 0; --i) {
     Function *f0 = Function::Create(funcType, Function::ExternalLinkage, product->cons + std::to_string(i), module);
-    BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "", f0);
+    BasicBlock *bb = BasicBlock::Create(context, "", f0);
     builder.SetInsertPoint(bb);
 
     Value *clo = generateClosure(f, f0->arg_begin());
-    Value *clo_c = builder.CreateBitCast(clo, refType);
-    builder.CreateRet(clo_c);
+    builder.CreateRet(clo);
     verifyFunction(*f0);
     f = f0;
   }
 
-  Function *f0 = Function::Create(funcType, Function::ExternalLinkage, "", module);
+  Function *f0 = Function::Create(funcType, Function::ExternalLinkage, "ret " + product->cons, module);
   BasicBlock *bb = BasicBlock::Create(context, "", f0);
   builder.SetInsertPoint(bb);
-  Value *stack = generateMalloc(ConstantInt::get(context, APInt(64,(layout.getTypeAllocSize(refType) * product->types.size()))));
+  Value *stack = generateMalloc(ConstantInt::get(context, env.size()));
 
   Value *clo = generateClosure(f, stack);
-  Value *clo_c = builder.CreateBitCast(clo, refType);
   
-  builder.CreateRet(clo_c);
+  builder.CreateRet(clo);
   verifyFunction(*f0);
   
   return Term{f0, type};
 }
+
+Codegen::Term Codegen::generate(const ast::Fixpoint *const fix, Env<llvm::APInt> &env) {
+  const ast::Abstraction *abs = dynamic_cast<const ast::Abstraction *>(fix->term);
+  if (abs == NULL)
+    throw TermNotMatch(fix->term, typeid(ast::Abstraction));
+  env.push(abs->arg, abs->type, APInt(64, layout.getTypeAllocSize(refType)));
+  Term term = generate(abs->term, env);
+  if (*term.type != *abs->type)
+    throw TypeNotMatch(TermException(abs->term, term.type), abs->type);
+
+  const ast::FunctionType *type = dynamic_cast<const ast::FunctionType *>(term.type);
+  if (type == NULL)
+    throw ClassNotMatch(TermException(abs->term, term.type), typeid(ast::FunctionType));
+
+  Value *Gclo_p = new GlobalVariable(*module,
+                                     PclosureType,
+                                      false,
+                                     GlobalValue::InternalLinkage,
+                                     ConstantPointerNull::get(PclosureType),
+                                      "Gclo " + abs->arg);
+
+  Function *co = Function::Create(funcType, Function::ExternalLinkage, "co " + abs->arg, module);
+  {
+    BasicBlock *bb = BasicBlock::Create(context, "", co);
+    builder.SetInsertPoint(bb);
+    Value *stack = co->arg_begin();
+
+    Value *Gclo = builder.CreateLoad(PclosureType, Gclo_p);
+    auto pair = generateDeclosure(Gclo);
+    Value *Gfunc = pair.first;
+    Value *Gstack = pair.second;
+    
+    Value *x_p = builder.CreateBitCast(Gstack, PointerType::get(refType, 0));
+  
+    Value *x_bak = builder.CreateLoad(refType, x_p);
+    
+    Value *x = generatePop(refType, stack);
+    generatePush(x, Gstack);
+
+    CallInst *call = builder.CreateCall(Gfunc, {Gstack});
+
+    builder.CreateStore(x_bak, x_p);
+
+    Value *call_c = builder.CreateBitCast(call, refType);
+    builder.CreateRet(call_c);
+  }
+  verifyFunction(*co);
+
+  Function *f = Function::Create(funcType, Function::ExternalLinkage, "fix " + abs->arg, module);
+  BasicBlock *bb = BasicBlock::Create(context, "", f);
+  builder.SetInsertPoint(bb);
+  Value *stack = f->arg_begin();
+  
+  Value *stack_co = generateMalloc(ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(refType))));
+  Value *clo_co = generateClosure(co, stack_co);
+  generatePush(clo_co, stack);
+
+  CallInst *call = builder.CreateCall(term.value, {stack});
+  Value *clo = builder.CreateBitCast(call, PclosureType);
+  builder.CreateStore(clo, Gclo_p);
+
+  builder.CreateRet(call);
+  verifyFunction(*f);
+  return Term{f, abs->type};
+}
+
+std::pair<Value *, Value *> Codegen::generateDeclosure(Value *clo) {
+  generatePrintf("begin Declo [%p]\n", clo);
+  Value *clo_c = builder.CreateBitCast(clo, PclosureType);
+  Value *index[2] = {ConstantInt::get(context, APInt(32, 0))};
+  index[1] = ConstantInt::get(context, APInt(32, 0));
+  Value *func_p = builder.CreateGEP(clo_c, index);
+  index[1] = ConstantInt::get(context, APInt(32, 1));
+  Value *stack_p = builder.CreateGEP(clo_c, index);
+
+  generatePrintf("Load [%p]\n", func_p);
+  Value *func = builder.CreateLoad(PfuncType, func_p);
+  generatePrintf("Load [%p]\n", stack_p);
+  Value *stack = builder.CreateLoad(stackType, stack_p);
+  generatePrintf("end Declo [%p]\n", clo);
+  return std::make_pair(func, stack);
+}
+
+Value *Codegen::generatePrintf(const char *const fmt, Value *val) {
+  static Function *printf = NULL;
+  if (printf == NULL) {
+    FunctionType *printfType = FunctionType::get(IntegerType::get(context, 32),
+                                                 {PointerType::get(IntegerType::get(context, 8), 0)},
+                                                 true);
+    printf = Function::Create(printfType, Function::ExternalLinkage, "printf", module);
+  }
+  std::vector<Value *> args;
+  args.push_back(builder.CreateGlobalStringPtr(fmt));
+  args.push_back(val);
+  return builder.CreateCall(printf, args);
+}
+
+Value *Codegen::generateEval(Value *eval, Value *stack) {
+  generatePrintf("begin eval [%p]", eval);
+  generatePrintf("with stack %p\n", stack);
+  Value *ret = builder.CreateCall(eval, {stack});
+  generatePrintf("end eval [%p] ", eval);
+  generatePrintf("= %p\n", ret);
+  return ret;
+}
+
+Value *Codegen::generateLoad(Type *type, Value *ptr) {
+  //comment this out since this disables LLVM type checking.
+  //very dangerous.
+  //Value *ptr_c = builder.CreateBitCast(ptr, PointerType::get(type));
+  Value *val = builder.CreateLoad(type, ptr);
+  return val;
+}
+
 
 void Codegen::dump() {
   module->dump();

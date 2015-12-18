@@ -21,7 +21,7 @@
 /test/.libs/
 /test/Makefile
 /test/Makefile.in
-
+*.ll
 *.out
 
 /stamp-h1

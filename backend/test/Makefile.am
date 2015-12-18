@@ -12,29 +12,34 @@ LDADD = $(COMMONDIR)/libcommon.la ../libbackend.la
 
 TEST_CPP = $(patsubst %.cpp,%,$(wildcard *.cpp))
 TEST = $(TEST_CPP)
-all : $(patsubst %,ll/%.ll,$(TEST))
 all : $(patsubst %,ll/%.out,$(TEST))
 
-ll/%.out : ll/%.o $(WRAPPERDIR)/libmain.la
+.SECONDARY :
+run-% : ll/%.out
+	$^
+run-%-gdb : ll/%.out
+	gdb $^
+
+ll/%.out : ll/%.o $(WRAPPERDIR)/main.o
 	libtool --tag=CXX --mode=link $(CXX) $(CXXFLAGS) -o $@ $^
 
 ll/%.o : ll/%.ll
 	llc -O0 -filetype=obj $<
 
 ll/%.ll : %.out
-	./$< >$@ 2>&1
+	./$<  2>$@
 
-%.out : %.o $(LDADD)
+%.out : %.o $(LDADD) main.o
 	libtool --tag=CXX --mode=link $(CXX) $(CXXFLAGS) -o $@ $^
 
 %.o : %.cpp
 	$(CXXCOMPILE) -c $^
 
 
-.PHONY : $(COMMONDIR)/libcommon.la ../libbackend.la $(WRAPPERDIR)/libmain.la
+.PHONY : $(COMMONDIR)/libcommon.la ../libbackend.la $(WRAPPERDIR)/main.o
 $(COMMONDIR)/libcommon.la :
 	$(MAKE) -C ${@D} ${@F}
-$(WRAPPERDIR)/libmain.la :
+$(WRAPPERDIR)/main.o:
 	$(MAKE) -C ${@D} ${@F}
 ../libbackend.la :
 	$(MAKE) -C ${@D} ${@F}

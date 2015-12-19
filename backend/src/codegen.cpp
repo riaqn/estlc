@@ -124,10 +124,16 @@ Codegen::Term Codegen::generate(const ast::Abstraction *const abs, Env<APInt> &e
   BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "", f);
   builder.SetInsertPoint(bb);
   Value *stack = f->arg_begin();
-  Value *clo = generateClosure(term.value, stack);
 
-  Value *clo_c = builder.CreateBitCast(clo, refType);
-  builder.CreateRet(clo_c);
+  Value *stack_begin = builder.CreateGEP(stack, ConstantInt::get(context, -env.size()));
+  Value *stack0_begin = generateMalloc(ConstantInt::get(context, APInt(64, 4096)));
+  Value *size = ConstantInt::get(context, env.size());
+  generateMemmove(stack0_begin, stack_begin, size);
+  Value *stack0 = builder.CreateGEP(stack0_begin, size);
+
+  Value *clo = generateClosure(term.value, stack0);
+
+  builder.CreateRet(clo);
   verifyFunction(*f);
   return Term{f, new ast::FunctionType(abs->type, term.type)};
 
@@ -384,6 +390,17 @@ Value *Codegen::generateMalloc(Value *size) {
 
 }
 
+Value *Codegen::generateMemmove(Value *dst, Value *src, Value *n) {
+  static Function *memmove = NULL;
+  if (memmove == NULL) {
+    FunctionType *type = FunctionType::get(refType, {refType, refType, IntegerType::get(context, 64)}, false);
+    memmove = Function::Create(type, Function::ExternalLinkage, "memmove", module);
+  }
+  CallInst *call = builder.CreateCall(memmove, {dst, src, n});
+  return call;
+
+}
+
 Value *Codegen::generateMalloc(Type *type) {
   generatePrintf("begin Malloc for type\n", ConstantPointerNull::get(stackType));
   Value *m = generateMalloc(ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(type))));
@@ -498,7 +515,7 @@ Codegen::Term Codegen::generate(const ast::Fixpoint *const fix, Env<llvm::APInt>
     throw ClassNotMatch(TermException(abs->term, term.type), typeid(ast::FunctionType));
 
   Value *Gclo_p = new GlobalVariable(*module,
-                                     PclosureType,
+                                     refType,
                                       false,
                                      GlobalValue::InternalLinkage,
                                      ConstantPointerNull::get(PclosureType),
@@ -510,24 +527,20 @@ Codegen::Term Codegen::generate(const ast::Fixpoint *const fix, Env<llvm::APInt>
     builder.SetInsertPoint(bb);
     Value *stack = co->arg_begin();
 
-    Value *Gclo = builder.CreateLoad(PclosureType, Gclo_p);
-    auto pair = generateDeclosure(Gclo);
-    Value *Gfunc = pair.first;
-    Value *Gstack = pair.second;
-    
-    Value *x_p = builder.CreateBitCast(Gstack, PointerType::get(refType, 0));
-  
-    Value *x_bak = builder.CreateLoad(refType, x_p);
-    
     Value *x = generatePop(refType, stack);
-    generatePush(x, Gstack);
+    Value *stack0 = generatePop(stackType, stack);
 
-    CallInst *call = builder.CreateCall(Gfunc, {Gstack});
+    Value *clo = generateEval(term.value, stack0);
+    auto pair = generateDeclosure(clo);
+    Value *func1 = pair.first;
+    Value *stack1 = pair.second;
 
-    builder.CreateStore(x_bak, x_p);
+    Value *Gclo = builder.CreateLoad(refType, Gclo_p);
+    generatePush(Gclo, stack1);
+    generatePush(x, stack1);
 
-    Value *call_c = builder.CreateBitCast(call, refType);
-    builder.CreateRet(call_c);
+    Value *ret = generateEval(func1, stack1);
+    builder.CreateRet(ret);
   }
   verifyFunction(*co);
 
@@ -536,16 +549,16 @@ Codegen::Term Codegen::generate(const ast::Fixpoint *const fix, Env<llvm::APInt>
   builder.SetInsertPoint(bb);
   Value *stack = f->arg_begin();
   
-  Value *stack_co = generateMalloc(ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(refType))));
-  Value *clo_co = generateClosure(co, stack_co);
-  generatePush(clo_co, stack);
-
-  CallInst *call = builder.CreateCall(term.value, {stack});
-  Value *clo = builder.CreateBitCast(call, PclosureType);
+  Value *stack_co = generateMalloc(ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(refType) * 4)));
+  generatePush(stack, stack_co);
+  
+  
+  Value *clo = generateClosure(co, stack_co);
   builder.CreateStore(clo, Gclo_p);
 
-  builder.CreateRet(call);
+  builder.CreateRet(clo);
   verifyFunction(*f);
+  env.pop();
   return Term{f, abs->type};
 }
 

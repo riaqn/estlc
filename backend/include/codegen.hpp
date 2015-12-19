@@ -48,6 +48,7 @@ public:
   llvm::Value *generateEval(llvm::Value *eval, llvm::Value *stack);
   llvm::Value *generateMalloc(llvm::Type *type);
   llvm::Value *generateMalloc(llvm::Value *size);
+  llvm::Value *generateMemmove(llvm::Value *dst, llvm::Value *src, llvm::Value *n);
   llvm::Value *generatePrintf(const char *const fmt, llvm::Value *val);
   llvm::Value *generateClosure(llvm::Value *func, llvm::Value *stack);
   llvm::Value *generateLoad(llvm::Type *type, llvm::Value *ptr);

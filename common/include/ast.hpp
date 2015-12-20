@@ -104,12 +104,6 @@ namespace ast{
     Fixpoint(const Term *term);
   };
 
-  struct Fixpoint : public Term {
-    //this term must has type A->A
-    const Term *term;
-    Fixpoint(const Term *term);
-  };
-
   struct Program {
     std::vector<const Type *> types;
     const Term *term;

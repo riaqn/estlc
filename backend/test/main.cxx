@@ -6,14 +6,13 @@
 
 using namespace ast;
 
-extern Term *getTerm();
-extern std::vector<const Type *> getTypes();
+extern Program *getProgram();
 
 int main() {
-  Program program(getTypes(), getTerm());
+  Program *program = getProgram();
 
   Codegen codegen;
-  Codegen::Term v = codegen.generate(program);
+  Codegen::Term v = codegen.generate(*program);
   (void)v;
   codegen.dump();
 }

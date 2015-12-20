@@ -33,11 +33,12 @@ bool Type::operator !=(const Type &b) const {
 }
 
 
-ProductType::ProductType(std::vector<const Type *> &types, const std::string &cons)
+ProductType::ProductType(const std::vector<const Type *> &types, const std::string &cons)
   :types(types), cons(cons)
 {}
 
 bool ProductType::operator==(const ProductType &b) const {
+  return true;
   return this == &b;
 }
 
@@ -62,7 +63,8 @@ SumType::SumType(const std::vector<std::pair<const Type *, const std::string> > 
   :types(types) {}
 
 bool SumType::operator==(const SumType &b) const {
-  return this == &b;
+  return true;
+  //  return this == &b;
 }
 
 std::string SumType::to_string() const {

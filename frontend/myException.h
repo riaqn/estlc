@@ -19,7 +19,7 @@ public:
 		:runtime_error(what), token(token), line(line)
 	{
 	}
-  ~syntax_error() throw();
+  ~syntax_error() throw() {};
 	string token;
 	unsigned line;
 };

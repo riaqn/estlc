@@ -1,14 +1,16 @@
 COMMONDIR = $(top_srcdir)/../common
+FRONTDIR = $(top_srcdir)/../frontend
+
 WRAPPERDIR = $(top_srcdir)/wrapper
 
-AM_CPPFLAGS += -I$(COMMONDIR)/include -I../include
+AM_CPPFLAGS += -I$(COMMONDIR)/include -I$(FRONTDIR) -I../include
 AM_CPPFLAGS += `llvm-config --cppflags`
 AM_CXXFLAGS += `llvm-config --cxxflags`
 
 noinst_LTLIBRARIES = libdumb.la
 libdumb_la_SOURCES = dumb.cxx
 
-LDADD = $(COMMONDIR)/libcommon.la ../libbackend.la
+LDADD = $(COMMONDIR)/libcommon.la $(FRONTDIR)/libfrontend.la ../libbackend.la 
 
 TEST_CPP = $(patsubst %.cpp,%,$(wildcard *.cpp))
 TEST = $(TEST_CPP)
@@ -39,8 +41,10 @@ ll/%.ll : %.out
 	$(CXXCOMPILE) -c $^
 
 
-.PHONY : $(COMMONDIR)/libcommon.la ../libbackend.la $(WRAPPERDIR)/main.o
+.PHONY : $(COMMONDIR)/libcommon.la $(FRONTDIR)/libfrontend.la ../libbackend.la $(WRAPPERDIR)/main.o
 $(COMMONDIR)/libcommon.la :
+	$(MAKE) -C ${@D} ${@F}
+$(FRONTDIR)/libfrontend.la :
 	$(MAKE) -C ${@D} ${@F}
 $(WRAPPERDIR)/main.o:
 	$(MAKE) -C ${@D} ${@F}

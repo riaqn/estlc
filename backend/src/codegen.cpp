@@ -289,7 +289,7 @@ Codegen::Term Codegen::generate(const ast::Program &prog) {
     env.push(pair.second, term.type, APInt(64, layout.getTypeAllocSize(term.value->getType())));
   }
 
-  std::string prims[] = {"<"};
+  std::string prims[] = {"<", ">="};
   for (auto prim : prims) {
     Term term = generatePrimitive(prim);
     funcs.push_back(term);
@@ -576,17 +576,39 @@ Codegen::Term Codegen::generatePrimitive(const std::string &prim) {
     Value *stack = f->arg_begin();
 
     Value *y = generatePop(refType, stack);
+    Value *y_v = generateLoad(IntegerType::get(context, 32), y);
     Value *x = generatePop(refType, stack);
+    Value *x_v = generateLoad(IntegerType::get(context, 32), x);
 
-    Value *res = builder.CreateICmpULT(x, y);
+    Value *res = builder.CreateICmpULT(x_v, y_v);
     Value *ret = generateSum(res, ConstantPointerNull::get(refType));
     builder.CreateRet(ret);
     verifyFunction(*f);
 
-    return Term{generateBinary(f), new ast::FunctionType(new ast::PrimitiveType("int"),
-                                                     new ast::FunctionType(new ast::PrimitiveType("int"),
+    return Term{generateBinary(f), new ast::FunctionType(new ast::PrimitiveType("Int"),
+                                                     new ast::FunctionType(new ast::PrimitiveType("Int"),
+                                                                           Bool))};
+  } else if (prim == ">=") {
+    Function *f = Function::Create(funcType, Function::ExternalLinkage, prim, module);
+    BasicBlock *bb = BasicBlock::Create(context, "", f);
+    builder.SetInsertPoint(bb);
+    Value *stack = f->arg_begin();
+
+    Value *y = generatePop(refType, stack);
+    Value *y_v = generateLoad(IntegerType::get(context, 32), y);
+    Value *x = generatePop(refType, stack);
+    Value *x_v = generateLoad(IntegerType::get(context, 32), x);
+
+    Value *res = builder.CreateICmpUGE(x_v, y_v);
+    Value *ret = generateSum(res, ConstantPointerNull::get(refType));
+    builder.CreateRet(ret);
+    verifyFunction(*f);
+
+    return Term{generateBinary(f), new ast::FunctionType(new ast::PrimitiveType("Int"),
+                                                     new ast::FunctionType(new ast::PrimitiveType("Int"),
                                                                            Bool))};
   }
+  
   return Term{NULL, NULL};
 }
   
@@ -695,8 +717,8 @@ Value *Codegen::generateEval(Value *eval, Value *stack) {
 Value *Codegen::generateLoad(Type *type, Value *ptr) {
   //comment this out since this disables LLVM type checking.
   //very dangerous.
-  //Value *ptr_c = builder.CreateBitCast(ptr, PointerType::get(type));
-  Value *val = builder.CreateLoad(type, ptr);
+  Value *ptr_c = builder.CreateBitCast(ptr, PointerType::get(type, 0));
+  Value *val = builder.CreateLoad(type, ptr_c);
   return val;
 }
 

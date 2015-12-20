@@ -90,7 +90,7 @@ Codegen::Term Codegen::generate(const ast::Application *app, Env<APInt> &env) {
 
   generatePush(call1, stack0);
 
-  CallInst *call = builder.CreateCall(func0, {stack0});
+  Value *call = generateEval(func0, stack0);
 
   builder.CreateRet(call);
 
@@ -157,29 +157,36 @@ Codegen::Term Codegen::generate(const ast::Deproduct *const dep, Env<APInt> &env
   StructType *productType = StructType::get(context, elems);
 
   Term term = generate(dep->term, env);
+  for (unsigned i = 0; i < n; ++i)
+    (void)env.pop();
 
   Function *f = Function::Create(funcType, Function::ExternalLinkage, "dep", module);
   BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "", f);
   builder.SetInsertPoint(bb);
 
   Value *stack = f->arg_begin();
+
+  Value *size = ConstantInt::get(context, env.size());
+  Value *stack_begin = builder.CreateGEP(stack, ConstantInt::get(context, -env.size()));
+  Value *stack0_begin = generateMalloc(ConstantInt::get(context, APInt(64, 4096)));
+  generateMemmove(stack0_begin, stack_begin, size);
+  Value *stack0 = builder.CreateGEP(stack0_begin, size);
+
   
-  CallInst *p = builder.CreateCall(product.value, stack);
+  Value *p = generateEval(product.value, stack);
   Value *p_c = builder.CreateBitCast(p, PointerType::get(productType, 0));
   Value *index[2] = {ConstantInt::get(context, APInt(32, 0))};
   for (size_t i = 0; i < n; ++i) {
     index[1] = ConstantInt::get(context, APInt(32, i));
     Value *v_p = builder.CreateGEP(p_c, index);
     Value *v = builder.CreateLoad(refType, v_p);
-    generatePush(v, stack);
+    generatePush(v, stack0);
   }
 
-  CallInst *call = builder.CreateCall(term.value, {stack});
+  Value *call = generateEval(term.value, stack0);
   builder.CreateRet(call);
   verifyFunction(*f);
 
-  for (unsigned i = 0; i < n; ++i)
-    (void)env.pop();
   return Term{f, term.type};
 }
 
@@ -216,7 +223,13 @@ Codegen::Term Codegen::generate(const ast::Desum *const des, Env<APInt> &env) {
 
   Value *stack = f->arg_begin();
 
-  CallInst *call = builder.CreateCall(sum.value, {stack});
+  Value *size = ConstantInt::get(context, env.size());
+  Value *stack_begin = builder.CreateGEP(stack, ConstantInt::get(context, -env.size()));
+  Value *stack0_begin = generateMalloc(ConstantInt::get(context, APInt(64, 4096)));
+  generateMemmove(stack0_begin, stack_begin, size);
+  Value *stack0 = builder.CreateGEP(stack0_begin, size);
+
+  Value *call = generateEval(sum.value, stack);
   Value *value = builder.CreateBitCast(call, PointerType::get(sumType, 0));
   generatePrintf("begin Desum [%p]\n", value);
 
@@ -237,9 +250,9 @@ Codegen::Term Codegen::generate(const ast::Desum *const des, Env<APInt> &env) {
   //call it.
 
   //then we push the remainer into the stack
-  generatePush(ref, stack);
+  generatePush(ref, stack0);
     
-  CallInst *casecall = builder.CreateCall(func, {stack});
+  Value *casecall = generateEval(func, stack0);
   builder.CreateRet(casecall);
   verifyFunction(*f);
 
@@ -481,8 +494,16 @@ Codegen::Term Codegen::generate(const ast::ProductType *const product) {
     Function *f0 = Function::Create(funcType, Function::ExternalLinkage, product->cons + std::to_string(i), module);
     BasicBlock *bb = BasicBlock::Create(context, "", f0);
     builder.SetInsertPoint(bb);
+    Value *stack = f0->arg_begin();
 
-    Value *clo = generateClosure(f, f0->arg_begin());
+    
+    Value *stack_begin = builder.CreateGEP(stack, ConstantInt::get(context, -env.find(std::to_string(i)).first));
+    Value *stack0_begin = generateMalloc(ConstantInt::get(context, APInt(64, 4096)));
+    Value *size = ConstantInt::get(context, env.find(std::to_string(i)).first);
+    generateMemmove(stack0_begin, stack_begin, size);
+    Value *stack0 = builder.CreateGEP(stack0_begin, size);
+
+    Value *clo = generateClosure(f, stack0);
     builder.CreateRet(clo);
     verifyFunction(*f0);
     f = f0;

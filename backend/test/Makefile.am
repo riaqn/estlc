@@ -17,8 +17,11 @@ all : $(patsubst %,ll/%.out,$(TEST))
 .SECONDARY :
 run-% : ll/%.out
 	$^
-run-%-gdb : ll/%.out
-	gdb $^
+run-%-gdb : ll/%.out ll/%.s
+	gdb $<
+
+ll/%.s : ll/%.out
+	objdump -D $< >$@
 
 ll/%.out : ll/%.o $(WRAPPERDIR)/main.o
 	libtool --tag=CXX --mode=link $(CXX) $(CXXFLAGS) -o $@ $^

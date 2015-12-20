@@ -20,11 +20,11 @@ private:
   llvm::DataLayout layout;
 
   std::vector<llvm::Type *> argsType;
-  llvm::Type  *refType, *productType, *indexType, *sumType, *closureType;
-  llvm::PointerType *PclosureType, *PfuncType, *stackType;
+  llvm::Type  *productType, *indexType, *sumType, *closureType;
+  llvm::PointerType *PclosureType, *PfuncType, *stackType, *refType;
   llvm::FunctionType *funcType;
 
-
+  ast::SumType *Bool;
 public:
   struct Term {
     llvm::Function *value;
@@ -52,7 +52,11 @@ public:
   llvm::Value *generatePrintf(const char *const fmt, llvm::Value *val);
   llvm::Value *generateClosure(llvm::Value *func, llvm::Value *stack);
   llvm::Value *generateLoad(llvm::Type *type, llvm::Value *ptr);
+  llvm::Value *generateSum(llvm::Value *idx, llvm::Value *ref);
+
   std::pair<llvm::Value *, llvm::Value *> generateDeclosure(llvm::Value *clo);
+  Term generatePrimitive(const std::string &prim);
+  llvm::Function *generateBinary(llvm::Function *f0);
 
   void dump();
 };

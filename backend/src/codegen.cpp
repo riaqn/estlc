@@ -277,6 +277,25 @@ LoadInst *Codegen::generatePop(Type *const type, Value *&stack) {
 Codegen::Term Codegen::generate(const ast::Program &prog) {
   Env<APInt> env(APInt(layout.getTypeAllocSizeInBits(refType), 0));
   std::vector<Term> funcs;
+  //generate bool
+  std::vector<std::pair<const ast::Type *, const std::string>> types;
+  types.push_back(std::make_pair(new ast::PrimitiveType("Unit"), "false"));
+  types.push_back(std::make_pair(new ast::PrimitiveType("Unit"), "true"));
+  Bool = new ast::SumType(types);
+  uint32_t idx = 0;
+  for (auto pair : Bool->types) {
+    Term term = generate(Bool, idx++);
+    funcs.push_back(term);
+    env.push(pair.second, term.type, APInt(64, layout.getTypeAllocSize(term.value->getType())));
+  }
+
+  std::string prims[] = {"<"};
+  for (auto prim : prims) {
+    Term term = generatePrimitive(prim);
+    funcs.push_back(term);
+    env.push(prim, term.type, APInt(64, layout.getTypeAllocSize(term.value->getType())));
+  }
+
   // generate construcotr for tyeps
   for (const ast::Type *type : prog.types) {
     if (auto prim = dynamic_cast<const ast::PrimitiveType *>(type)) {
@@ -522,6 +541,56 @@ Codegen::Term Codegen::generate(const ast::ProductType *const product) {
   return Term{f0, type};
 }
 
+Function *Codegen::generateBinary(Function *f0) {
+  Function *f = Function::Create(funcType, Function::ExternalLinkage, "binary", module);
+  {
+  BasicBlock *bb = BasicBlock::Create(context, "", f);
+  builder.SetInsertPoint(bb);
+
+  Value *stack = f->arg_begin();
+
+  Value *x = generatePop(refType, stack);
+  
+  Value *stack0 = generateMalloc(ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(refType) * 2)));
+  generatePush(x, stack0);
+
+  Value *clo = generateClosure(f0, stack0);
+  builder.CreateRet(clo);
+  }
+  verifyFunction(*f);
+  Function *f1 = Function::Create(funcType, Function::ExternalLinkage, "f1", module);
+  BasicBlock *bb = BasicBlock::Create(context, "", f1);
+  builder.SetInsertPoint(bb);
+  Value *m = generateMalloc(ConstantInt::get(context, APInt(64, layout.getTypeAllocSize(refType))));
+  Value *clo = generateClosure(f, m);
+  builder.CreateRet(clo);
+  verifyFunction(*f1);
+  return f1;
+}
+
+Codegen::Term Codegen::generatePrimitive(const std::string &prim) {
+  if (prim == "<") {
+    Function *f = Function::Create(funcType, Function::ExternalLinkage, prim, module);
+    BasicBlock *bb = BasicBlock::Create(context, "", f);
+    builder.SetInsertPoint(bb);
+    Value *stack = f->arg_begin();
+
+    Value *y = generatePop(refType, stack);
+    Value *x = generatePop(refType, stack);
+
+    Value *res = builder.CreateICmpULT(x, y);
+    Value *ret = generateSum(res, ConstantPointerNull::get(refType));
+    builder.CreateRet(ret);
+    verifyFunction(*f);
+
+    return Term{generateBinary(f), new ast::FunctionType(new ast::PrimitiveType("int"),
+                                                     new ast::FunctionType(new ast::PrimitiveType("int"),
+                                                                           Bool))};
+  }
+  return Term{NULL, NULL};
+}
+  
+
 Codegen::Term Codegen::generate(const ast::Fixpoint *const fix, Env<llvm::APInt> &env) {
   const ast::Abstraction *abs = dynamic_cast<const ast::Abstraction *>(fix->term);
   if (abs == NULL)
@@ -631,7 +700,24 @@ Value *Codegen::generateLoad(Type *type, Value *ptr) {
   return val;
 }
 
-
 void Codegen::dump() {
   module->dump();
+}
+
+Value *Codegen::generateSum(Value *idx, Value *ref) {
+  Value *sum = generateMalloc(sumType);
+  Value *index[2] = {ConstantInt::get(context, APInt(32, 0))};
+  
+  index[1] = ConstantInt::get(context, APInt(32, 0));
+  Value *idx_p = builder.CreateGEP(sum, index);
+  index[1] = ConstantInt::get(context, APInt(32, 1));
+  Value *ref_p = builder.CreateGEP(sum, index);
+
+  Value *idx_c = builder.CreateIntCast(idx, indexType, false);
+  builder.CreateStore(idx_c, idx_p);
+  builder.CreateStore(ref, ref_p);
+
+  Value *sum_c = builder.CreateBitCast(sum, refType);
+
+  return sum_c;
 }

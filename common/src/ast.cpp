@@ -33,7 +33,7 @@ bool Type::operator !=(const Type &b) const {
 }
 
 
-ProductType::ProductType(const std::vector<const Type *> &types, const std::string &cons)
+ProductType::ProductType(std::vector<const Type *> &types, const std::string &cons)
   :types(types), cons(cons)
 {}
 

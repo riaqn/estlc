@@ -192,9 +192,7 @@ ModelManifest.xml
 *.vcxproj.filters
 *.sln
 /frontend/*.ast
-/frontend/*.mfc
 /frontend/*.tks
-/frontend/test.cpp
 
 Makefile.in
 Makefile

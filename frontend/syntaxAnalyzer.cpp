@@ -4,6 +4,14 @@
 SyntaxAnalyzer::SyntaxAnalyzer(TokenStream& stream)
 {
 	stream.initIter();
+
+	// add support of type bool manually
+	// only a temporary fix
+	vector<pair<const ast::Type *, const string>> bools;
+	bools.push_back(pair<const ast::Type *, const string>(getType("unit"), "false"));
+	bools.push_back(pair<const ast::Type *, const string>(getType("unit"), "true"));
+	types["bool"] = new ast::SumType(bools);
+
 	root = buildBlock(stream);
 
 }
@@ -112,7 +120,6 @@ void SyntaxAnalyzer::buildTypeDef(TokenStream& stream){
 
 }
 
-// return a type, possible primitive or algebraic or production of them
 ast::Type* SyntaxAnalyzer::buildFuncType(TokenStream& stream){
 	Token token = stream.next();	// type id
 	if (token.type != Token::ID && token.type != Token::NAT && token.type != Token::BOOL){
@@ -127,7 +134,6 @@ ast::Type* SyntaxAnalyzer::buildFuncType(TokenStream& stream){
 	return new ast::FunctionType(type, buildFuncType(stream));
 }
 
-// return the deepest term reference
 ast::Term* SyntaxAnalyzer::buildFuncDef(TokenStream& stream){
 	Token token = stream.next();	// func id
 	if (token.type != Token::ID){
@@ -176,12 +182,19 @@ ast::Term* SyntaxAnalyzer::buildFuncDef(TokenStream& stream){
 	// func definition expression
 	term = buildExpr(stream);
 
+	// special case for main function
+	if (funcId == "main"){
+		return new ast::Abstraction(ids[0], tps[0], term);
+	}
+
+	// else, not main func
 	for (int i = ids.size() - 1; i >= 0; i--){
 		type = new ast::FunctionType(tps[i], type);
 		term = new ast::Abstraction(ids[i], tps[i], term);
 	}
-	ast::Abstraction* func = new ast::Abstraction(funcId, type, buildBlock(stream));
+
 	term = new ast::Abstraction(funcId, type, term);
+	ast::Abstraction* func = new ast::Abstraction(funcId, type, buildBlock(stream));
 
 	return new ast::Application(func, new ast::Fixpoint(term));
 }
@@ -300,6 +313,18 @@ ast::Term* SyntaxAnalyzer::buildSimExpr(TokenStream& stream){
 	return term;
 }
 
+string rands(const unsigned len) {
+	static const char alphanum[] =
+		"0123456789"
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		"abcdefghijklmnopqrstuvwxyz";
+	string s;
+	for (unsigned i = 0; i < len; i++) {
+		s += alphanum[rand() % (sizeof(alphanum) - 1)];
+	}
+	return s;
+}
+
 ast::Term* SyntaxAnalyzer::buildMatchExpr(TokenStream& stream){
 	Token token = stream.next();
 	if (token.type != Token::MATCH){
@@ -315,7 +340,7 @@ ast::Term* SyntaxAnalyzer::buildMatchExpr(TokenStream& stream){
 			break;
 		}
 		token = stream.next();
-		string cons = token.name;
+		string cons = token.name+'_'+rands(10);
 		vector<string> names;
 		token = stream.next();
 		while (token.type != Token::CHOICE){
@@ -326,7 +351,7 @@ ast::Term* SyntaxAnalyzer::buildMatchExpr(TokenStream& stream){
 			names.push_back(token.name);
 			token = stream.next();
 		}
-		cases.push_back(pair<const string, const ast::Term*>(cons, new ast::Deproduct(expr, names, buildExpr(stream))));
+		cases.push_back(pair<const string, const ast::Term*>(cons, new ast::Deproduct(new ast::Reference(cons), names, buildExpr(stream))));
 	}
 	return new ast::Desum(expr, cases);
 }

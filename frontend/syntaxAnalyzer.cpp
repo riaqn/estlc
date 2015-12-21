@@ -30,7 +30,6 @@ ast::Program* SyntaxAnalyzer::getProgram()const{
 	vector<const ast::Type*> vec;
 	for (map<string, ast::Type*>::const_iterator it = types.begin(); it != types.end(); it++) {
 		vec.push_back(it->second);
-		cout << typeid(*(it->second)).name() << endl;
 	} 
 	return new ast::Program((const vector<const ast::Type*>)vec, root);
 }

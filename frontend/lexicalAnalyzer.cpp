@@ -26,7 +26,7 @@ TokenStream LexicalAnalyzer::parse(istream& is){
 			do{
 				buffer += peek;
 				peek = is.get();
-			} while (isalnum(peek) || peek == '_');
+			} while (isalnum(peek) || peek == '_' || peek == '\'');
 			is.putback(peek);
 			unsigned n;
 			for (n = Token::TYPE; n < Token::ID; n++){
@@ -70,8 +70,8 @@ TokenStream LexicalAnalyzer::parse(istream& is){
 			break;
 		case '#':
 			getline(is, buffer);
-			line++;
 			tokenStream.append(Token(Token::COM, buffer, line));
+			line++;
 			buffer.clear();
 			break;
 		case '+':

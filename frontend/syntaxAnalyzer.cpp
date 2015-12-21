@@ -1,10 +1,19 @@
 #include "syntaxAnalyzer.h"
 #include "myException.h"
-
+#include <iostream>
 SyntaxAnalyzer::SyntaxAnalyzer(TokenStream& stream)
 {
 	stream.initIter();
+
+	// add support of type bool manually
+	// only a temporary fix
+	vector<pair<const ast::Type *, const string>> bools;
+	bools.push_back(pair<const ast::Type *, const string>(getType("unit"), "false"));
+	bools.push_back(pair<const ast::Type *, const string>(getType("unit"), "true"));
+	types["bool"] = new ast::SumType(bools);
+
 	root = buildBlock(stream);
+
 }
 
 SyntaxAnalyzer::~SyntaxAnalyzer()
@@ -12,16 +21,24 @@ SyntaxAnalyzer::~SyntaxAnalyzer()
 	if (root != NULL){
 		delete root;
 	}
-}
-
-void SyntaxAnalyzer::printTree(ostream& os){
-	if (root != NULL){
-		os << root->toString();
+	for (map<string, ast::Type*>::iterator it = types.begin(); it != types.end(); it++){
+		delete it->second;
 	}
 }
 
-inline bool SyntaxAnalyzer::isTypeId(const Token& token){
-	return (token.type == Token::ID) || (token.type == Token::NAT) || (token.type == Token::BOOL);
+ast::Program* SyntaxAnalyzer::getProgram()const{
+	vector<const ast::Type*> vec;
+	for (map<string, ast::Type*>::const_iterator it = types.begin(); it != types.end(); it++) {
+		vec.push_back(it->second);
+	} 
+	return new ast::Program((const vector<const ast::Type*>)vec, root);
+}
+
+ast::Type* SyntaxAnalyzer::getType(const string& s){
+	if (types.find(s) == types.end()){
+		types[s] = new ast::PrimitiveType(s);
+	}
+	return types[s];
 }
 
 ast::Term* SyntaxAnalyzer::buildBlock(TokenStream& stream){
@@ -45,11 +62,13 @@ ast::Term* SyntaxAnalyzer::buildBlock(TokenStream& stream){
 
 void SyntaxAnalyzer::buildTypeDef(TokenStream& stream){
 	Token token = stream.next();
-
 	if (token.type != Token::ID){
 		throw syntax_error(token.name, token.line, "Should be an ID");
 	}
-	ast::AlgebraicType* type = new ast::AlgebraicType();
+	string typeId = token.name;
+	vector<pair<const ast::Type*, const string>> sumTypes;
+	ast::SumType* sumType = new ast::SumType(sumTypes);
+	types[typeId] = sumType;
 
 	token = stream.next();
 	if (token.type == Token::COLON){
@@ -69,44 +88,49 @@ void SyntaxAnalyzer::buildTypeDef(TokenStream& stream){
 		if (token.type != Token::ID && token.type != Token::NIL){
 			throw syntax_error(token.name, token.line, "Expected nil or identifier");
 		}
-		ast::AlgebraicType::Constructor cons;
-		cons.name = token.name;
+		string cons = token.name;
 
 		token = stream.next();
 		if (token.type != Token::COLON){
 			throw syntax_error(token.name, token.line, "Should be ':'");
 		}
-
+		vector<const ast::Type*> productTypes;
 		while (true){
 			token = stream.next();	// type id
-			if (token.type != Token::ID&&token.type != Token::NAT&&token.type != Token::BOOL){
+			if (token.type != Token::ID && token.type != Token::NAT && token.type != Token::BOOL){
 				throw syntax_error(token.name, token.line, "Expected type id");
 			}
 			string arg = token.name;
+
 			token = stream.next();	// ->
 			if (token.type != Token::PRODUCT){
 				stream.back();
+				if (arg != typeId){
+					throw syntax_error(arg, token.line, "Expected " + typeId);
+				}
 				break;
 			}
-			cons.args.push_back(new ast::PrimitiveType(arg));
+			productTypes.push_back(getType(arg));
 		}
-
-		type->constructors.push_back(cons);
+		if (productTypes.size() == 0){	// not a product type
+			sumType->types.push_back(pair<const ast::Type*, const string>(getType("unit"), cons));
+		}
+		else{
+			sumType->types.push_back(pair<const ast::Type*, const string>(new ast::ProductType(productTypes, cons), cons));
+		}
 
 		token = stream.next();			// if '|', go on, else stop
 	} while (token.type == Token::OR);
 	stream.back();		// put back the token
-	// do something with the type
+
 }
 
-// return a type, possible primitive or algebraic or production of them
 ast::Type* SyntaxAnalyzer::buildFuncType(TokenStream& stream){
 	Token token = stream.next();	// type id
-	if (!isTypeId(token)){
+	if (token.type != Token::ID && token.type != Token::NAT && token.type != Token::BOOL){
 		throw syntax_error(token.name, token.line, "Should be a type id");
 	}
-	string left = token.name;
-	ast::PrimitiveType* type = new ast::PrimitiveType(left);
+	ast::Type* type = getType(token.name);
 	token = stream.next();
 	if (token.type != Token::PRODUCT){
 		stream.back();
@@ -115,13 +139,12 @@ ast::Type* SyntaxAnalyzer::buildFuncType(TokenStream& stream){
 	return new ast::FunctionType(type, buildFuncType(stream));
 }
 
-// return the deepest term reference
 ast::Term* SyntaxAnalyzer::buildFuncDef(TokenStream& stream){
 	Token token = stream.next();	// func id
 	if (token.type != Token::ID){
 		throw syntax_error(token.name, token.line, "Should be an ID");
 	}
-	string funcid = token.name;
+	string funcId = token.name;
 
 	ast::Type* type = NULL;
 	ast::Term* term = NULL;
@@ -164,24 +187,32 @@ ast::Term* SyntaxAnalyzer::buildFuncDef(TokenStream& stream){
 	// func definition expression
 	term = buildExpr(stream);
 
+	// special case for main function
+	if (funcId == "main"){
+		return new ast::Abstraction(ids[0], tps[0], term);
+	}
+
+	// else, not main func
 	for (int i = ids.size() - 1; i >= 0; i--){
 		type = new ast::FunctionType(tps[i], type);
 		term = new ast::Abstraction(ids[i], tps[i], term);
 	}
-	ast::Abstraction* func = new ast::Abstraction(funcid, type, buildBlock(stream));
 
-	return new ast::Application(func, term);
+	term = new ast::Abstraction(funcId, type, term);
+	ast::Abstraction* func = new ast::Abstraction(funcId, type, buildBlock(stream));
+
+	return new ast::Application(func, new ast::Fixpoint(term));
 }
 
 ast::Term* SyntaxAnalyzer::buildFuncDesig(TokenStream& stream){
 	Token token = stream.next();	// funct id
-	string id = token.name;
+	string funcId = token.name;
 	token = stream.next();
 	if (token.type == Token::RPAR){
-		return new ast::Reference(id);
+		return new ast::Reference(funcId);
 	}
 	stream.back();
-	ast::Application *term = new ast::Application(new ast::Reference(id), buildExpr(stream));
+	ast::Application *term = new ast::Application(new ast::Reference(funcId), buildExpr(stream));
 	token = stream.next();
 	while (token.type != Token::RPAR){
 		stream.back();
@@ -287,58 +318,53 @@ ast::Term* SyntaxAnalyzer::buildSimExpr(TokenStream& stream){
 	return term;
 }
 
-ast::Application* SyntaxAnalyzer::buildMatchExpr(TokenStream& stream){
+string rands(const unsigned len) {
+	static const char alphanum[] =
+		"0123456789"
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		"abcdefghijklmnopqrstuvwxyz";
+	string s;
+	for (unsigned i = 0; i < len; i++) {
+		s += alphanum[rand() % (sizeof(alphanum) - 1)];
+	}
+	return s;
+}
+
+ast::Term* SyntaxAnalyzer::buildMatchExpr(TokenStream& stream){
 	Token token = stream.next();
 	if (token.type != Token::MATCH){
 		throw syntax_error(token.name, token.line, "Expected match");
 	}
-	ast::Application* left = new ast::Application(new ast::Reference(token.name), buildExpr(stream));
-	ast::Term* right = buildChoice(stream);
-	return new ast::Application(left, right);
-}
+	ast::Term* expr = buildExpr(stream);
+	vector<pair<const string, const ast::Term*>> cases;
 
-ast::Term* SyntaxAnalyzer::buildChoice(TokenStream& stream){
-	if (!stream.hasNext()){
-		return new ast::Reference("nil");
-	}
-	Token token = stream.next();
-	if (token.type != Token::OR){
-		stream.back();
-		return new ast::Reference("nil");
-	}
-	token = stream.next();
-	ast::Application* app = NULL;
-	switch (token.type){
-	case Token::NIL:
-	case Token::OTHER:
-	case Token::TRUE:
-	case Token::FALSE:
-	case Token::INT:{
-		string name = token.name;
-		token = stream.next();	// =>
-		if (token.type != Token::CHOICE){
-			throw syntax_error(token.name, token.line, "Should be \"=>\"");
+	while (stream.hasNext()){
+		token = stream.next();
+		if (token.type != Token::OR){
+			stream.back();
+			break;
 		}
-		app = new ast::Application(new ast::Reference(name), buildExpr(stream));
-		break;
-	}
-	case Token::ID:{
-		ast::Term *left = new ast::Reference(token.name);
-		token = stream.next();	// id
-		while (token.type == Token::ID){
-			left = new ast::Application(left, new ast::Reference(token.name));
+		token = stream.next();
+		string cons = token.name+'_'+rands(10);
+		
+		token = stream.next();
+		bool is_product = false;
+		vector<string> names;
+		while (token.type != Token::CHOICE){
+			// if token is an id?
+			if (token.type != Token::ID){
+				throw syntax_error(token.name, token.line, "Expected id");
+			}
+			is_product = true;
+			names.push_back(token.name);
 			token = stream.next();
 		}
-		if (token.type != Token::CHOICE){
-			throw syntax_error(token.name, token.line, "Should be \"=>\"");
+		if (is_product){
+			cases.push_back(pair<const string, const ast::Term*>(cons, new ast::Deproduct(new ast::Reference(cons), names, buildExpr(stream))));
 		}
-		app = new ast::Application(left, buildExpr(stream));
-		break;
+		else{
+			cases.push_back(pair<const string, const ast::Term*>(cons, buildExpr(stream)));
+		}
 	}
-	default:
-		throw syntax_error(token.name, token.line, "Expected match type or value");
-		break;
-	}
-	app = new ast::Application(new ast::Reference("cons"), app);
-	return new ast::Application(app, buildChoice(stream));
+	return new ast::Desum(expr, cases);
 }

@@ -1,0 +1,16 @@
+Frontend
+
+ tokenStream.h & .cpp: 
+  Provide basic Token struct to be used by token stream; Implement token stream with std::vector<Token>, provide append and iterator interface of token stream.
+
+ myException.h:
+  Frontend exceptions, inherit from std::runtime_error, used to identify lexical and syntax error.
+
+ lexicalAnalyzer.h & .cpp:
+  Simple implementation to parse from input stream, generate a token stream based on Token::TokenType and TokenName[] in tokenStream.h, throw error when there is lexical error, i.e, illegal character that can not be a token or part of a token. 
+
+ ast.cpp:
+  Frontend implementation of abstract syntax tree provided by include/ast.hpp.
+
+ syntaxAnalyzer.h & .cpp:
+  Build AST recursively from given token stream basing on the BNF, provide tree root for driver to iterate; throw error when there is syntax error. 

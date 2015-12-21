@@ -1,12 +1,12 @@
 Type list_int = 
-| nil : Unit->list_int
+| nil : list_int
 | cons_int : int -> list_int -> list_int
 
-Func main (l : list_nat) : list_nat = 
+Func main (l : list_int) : list_int = 
 match l
-| nil unit => l
+| nil => l
 | cons_int x l' => match l'
-                   | nil unit => l
+                   | nil  => l
                    | cons_int x' l'' => match (< x x')
-                                        | false unit => l
-                                        | true unit => l'
+                                        | false => l
+                                        | true => l'

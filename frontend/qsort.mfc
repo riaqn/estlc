@@ -22,4 +22,5 @@ match l
 | cons_nat x l0 => (app ( qsort (filter ( < x ) l0 ) ) 
 ( cons_nat x (qsort ( filter >= x ) l0 ) ) ) 
 
-(qsort (cons_nat 2 (cons_nat 1 (cons_nat 3 nil))))
+Func main (l : list_nat) : list_nat = 
+(qsort l)

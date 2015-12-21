@@ -1,6 +1,6 @@
 #include "syntaxAnalyzer.h"
 #include "myException.h"
-
+#include <iostream>
 SyntaxAnalyzer::SyntaxAnalyzer(TokenStream& stream)
 {
 	stream.initIter();
@@ -30,7 +30,8 @@ ast::Program* SyntaxAnalyzer::getProgram()const{
 	vector<const ast::Type*> vec;
 	for (map<string, ast::Type*>::const_iterator it = types.begin(); it != types.end(); it++) {
 		vec.push_back(it->second);
-	}
+		cout << typeid(*(it->second)).name() << endl;
+	} 
 	return new ast::Program((const vector<const ast::Type*>)vec, root);
 }
 
@@ -341,17 +342,25 @@ ast::Term* SyntaxAnalyzer::buildMatchExpr(TokenStream& stream){
 		}
 		token = stream.next();
 		string cons = token.name+'_'+rands(10);
-		vector<string> names;
+		
 		token = stream.next();
+		bool is_product = false;
+		vector<string> names;
 		while (token.type != Token::CHOICE){
 			// if token is an id?
 			if (token.type != Token::ID){
 				throw syntax_error(token.name, token.line, "Expected id");
 			}
+			is_product = true;
 			names.push_back(token.name);
 			token = stream.next();
 		}
-		cases.push_back(pair<const string, const ast::Term*>(cons, new ast::Deproduct(new ast::Reference(cons), names, buildExpr(stream))));
+		if (is_product){
+			cases.push_back(pair<const string, const ast::Term*>(cons, new ast::Deproduct(new ast::Reference(cons), names, buildExpr(stream))));
+		}
+		else{
+			cases.push_back(pair<const string, const ast::Term*>(cons, buildExpr(stream)));
+		}
 	}
 	return new ast::Desum(expr, cases);
 }

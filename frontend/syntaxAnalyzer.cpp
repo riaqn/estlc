@@ -112,7 +112,12 @@ void SyntaxAnalyzer::buildTypeDef(TokenStream& stream){
 			}
 			productTypes.push_back(getType(arg));
 		}
-		sumType->types.push_back(pair<const ast::Type*, const string>(new ast::ProductType(productTypes, cons), cons));
+		if (productTypes.size() == 0){	// not a product type
+			sumType->types.push_back(pair<const ast::Type*, const string>(getType("unit"), cons));
+		}
+		else{
+			sumType->types.push_back(pair<const ast::Type*, const string>(new ast::ProductType(productTypes, cons), cons));
+		}
 
 		token = stream.next();			// if '|', go on, else stop
 	} while (token.type == Token::OR);

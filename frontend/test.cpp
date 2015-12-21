@@ -96,8 +96,8 @@ void printTerm(const Term* term, ostream& os, int depth){
 
 int main(){
 	LexicalAnalyzer lexicalAnalyzer;
-	string srcfile = "it.estlc";
-	//string srcfile = "qsort.mfc";
+	//string srcfile = "it.estlc";
+	string srcfile = "qsort.mfc";
 	try{
 		ifstream is(srcfile);
 		if (!is){

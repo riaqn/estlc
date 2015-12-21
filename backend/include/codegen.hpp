@@ -10,6 +10,8 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/LLVMContext.h>
 
+#include <debug.hpp>
+
 #include "env.hpp"
 
 class Codegen {
@@ -25,6 +27,8 @@ private:
   llvm::FunctionType *funcType;
 
   ast::SumType *Bool;
+
+  Debug<LEVEL_DEBUG> debug;
 public:
   struct Term {
     llvm::Function *value;

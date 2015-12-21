@@ -298,6 +298,7 @@ Codegen::Term Codegen::generate(const ast::Program &prog) {
 
   // generate construcotr for tyeps
   for (const ast::Type *type : prog.types) {
+    std::cout << typeid(*type).name() << std::endl;
     if (auto prim = dynamic_cast<const ast::PrimitiveType *>(type)) {
       (void)prim;
       //do nothing for the primitive type
@@ -413,7 +414,7 @@ Value *Codegen::generateMalloc(Value *size) {
   if (malloc == NULL) {
     std::vector<Type*> types(1, IntegerType::get(context, 64));
     FunctionType *malloc_type = FunctionType::get(refType, types, false);
-    malloc = Function::Create(malloc_type, Function::ExternalLinkage, "malloc", module);
+    malloc = Function::Create(malloc_type, Function::ExternalLinkage, "GC_malloc", module);
   }
   Value *args[1] = {size};
   CallInst *call = builder.CreateCall(malloc, args);

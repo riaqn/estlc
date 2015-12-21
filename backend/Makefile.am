@@ -2,7 +2,7 @@ ACLOCAL_AMFLAGS = -I m4
 AM_CPPFLAGS += -I$(top_srcdir)/../include
 
 
-SUBDIRS = src . test
+SUBDIRS = src wrapper . test
 
 noinst_LTLIBRARIES = libbackend.la
 libbackend_la_SOURCES = 

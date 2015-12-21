@@ -25,7 +25,7 @@ run-%-gdb : ll/%.out ll/%.s
 ll/%.s : ll/%.out
 	objdump -D $< >$@
 
-ll/%.out : ll/%.o $(WRAPPERDIR)/main.o
+ll/%.out : ll/%.o $(WRAPPERDIR)/libwrapper.la
 	libtool --tag=CXX --mode=link $(CXX) $(CXXFLAGS) -o $@ $^
 
 ll/%.o : ll/%.ll
@@ -41,12 +41,12 @@ ll/%.ll : %.out
 	$(CXXCOMPILE) -c $^
 
 
-.PHONY : $(COMMONDIR)/libcommon.la $(FRONTDIR)/libfrontend.la ../libbackend.la $(WRAPPERDIR)/main.o
+.PHONY : $(COMMONDIR)/libcommon.la $(FRONTDIR)/libfrontend.la ../libbackend.la $(WRAPPERDIR)/libwrapper.la
 $(COMMONDIR)/libcommon.la :
 	$(MAKE) -C ${@D} ${@F}
 $(FRONTDIR)/libfrontend.la :
 	$(MAKE) -C ${@D} ${@F}
-$(WRAPPERDIR)/main.o:
+$(WRAPPERDIR)/libwrapper.la:
 	$(MAKE) -C ${@D} ${@F}
 ../libbackend.la :
 	$(MAKE) -C ${@D} ${@F}

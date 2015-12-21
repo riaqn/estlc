@@ -1,6 +1,6 @@
 Type list_int = 
 | nil : list_int
-| cons_int : int -> list_int -> list_int
+| cons_int : Int -> list_int -> list_int
 
 Func main (l : list_int) : list_int = 
 match l

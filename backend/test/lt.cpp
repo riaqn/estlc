@@ -10,7 +10,7 @@ Program *getProgram() {
   LexicalAnalyzer la;
   TokenStream ts(la.parse(ifs));
   
-  SyntaxAnalyzer sa(ts);
-  return sa.getProgram();
+  SyntaxAnalyzer *sa = new SyntaxAnalyzer(ts);
+  return sa->getProgram();
 }
 

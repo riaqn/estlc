@@ -29,6 +29,7 @@ AC_SUBST([AM_CPPFLAGS], [])
 
 AC_CONFIG_FILES([Makefile
                  src/Makefile
+                 wrapper/Makefile
                  test/Makefile])
 
 

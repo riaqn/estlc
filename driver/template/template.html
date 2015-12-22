@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>AST Tree</title> 
+    
+    <link rel="stylesheet" href="static/template.css">
+    <link rel="stylesheet" href="static/bootstrap.min.css">
+    
+    <script src="static/jquery-1.11.3.min.js"></script>
+    <script src="static/bootstrap.min.js"></script>
+    
+</head>
+<body>
+<!--
+We will create a family tree using just CSS(3)
+The markup will be simple nested lists
+-->
+
+<div class="tree-panel">
+<div class="tree">
+    <ul id="tree-root">
+        
+    </ul>
+    <li id="initial-tree-node" style="display:none">
+            <a class="node">Temperary</a>
+            <ul></ul>
+        </li>
+    
+</div>
+</div>
+
+<div style="clear:both"></div>
+
+<div id="token-panel-back"></div>
+    
+<div id="token-panel">
+    
+<div class="btn-group" role="group" aria-label="..." style="width:150%; margin-left:5px;">
+    <div id="initial-token-tuple" class="token-tuple" style="float:left; display:none; margin-right: 5px;">
+        <button type="button" class="btn btn-default token-type">Token Name Area</button>
+        <br>
+        <button type="button" class="btn btn-success token-code">Code</button>
+    </div>
+    <div id="initial-token-newline" style="clear:both; display:none; margin-top: 10px;"></div>
+</div>
+<div style="clear:both"></div>
+
+</div>
+    
+<div id= "token-tag">
+    <<<<
+</div>
+
+<script src="static/template.js"></script>
+</body>
+</html>

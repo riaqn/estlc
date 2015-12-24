@@ -5,6 +5,6 @@ noinst_LTLIBRARIES = libcommon.la
 libcommon_la_SOURCES = 
 libcommon_la_LIBADD = src/libcommon.la
 
-.PHONY :
+.PHONY : src/libcommon.la
 src/libcommon.la :
 	$(MAKE) -C $(@D) $(@F)

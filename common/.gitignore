@@ -17,6 +17,10 @@
 /src/.libs/
 /src/Makefile
 /src/Makefile.in
+/include/.deps/
+/include/.libs/
+/include/Makefile
+/include/Makefile.in
 /test/.deps/
 /test/.libs/
 /test/Makefile

@@ -164,6 +164,6 @@ Fixpoint::Fixpoint(const Term *term)
   :term(term)
 {}
    
-Program::Program(const std::vector<const Type *> types, const Term *term)
+Program::Program(const std::map<const std::string, const Type *> types, const Term *term)
   :types(types), term(term)
 {}

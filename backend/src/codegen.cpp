@@ -47,20 +47,22 @@ Codegen::Codegen()
     }
 
 Codegen::Term Codegen::generate(const ast::Term *term, Env<APInt> &env) {
+  Term term0;
   if (const ast::Application *app = dynamic_cast<const ast::Application *>(term))
-    return generate(app, env);
+    term0 = generate(app, env);
   else if (const ast::Abstraction *abs = dynamic_cast<const ast::Abstraction *>(term))
-    return generate(abs, env);
+    term0 = generate(abs, env);
   else if (const ast::Reference *ref = dynamic_cast<const ast::Reference *>(term))
-    return generate(ref, env);
+    term0 = generate(ref, env);
   else if (const ast::Desum *des = dynamic_cast<const ast::Desum *>(term))
-    return generate(des, env);
+    term0 = generate(des, env);
   else if (const ast::Deproduct *dep = dynamic_cast<const ast::Deproduct *>(term))
-    return generate(dep, env);
+    term0 = generate(dep, env);
   else if (const ast::Fixpoint *fix = dynamic_cast<const ast::Fixpoint *>(term))
-    return generate(fix, env);
+    term0 = generate(fix, env);
   else
     throw TermNotMatch(term, typeid(ast::Term));
+  map.insert(std::make_pair(term, term0));
 }
 
 Codegen::Term Codegen::generate(const ast::Application *app, Env<APInt> &env) {

@@ -15,7 +15,6 @@
 #include "env.hpp"
 
 class Codegen {
-private:
   llvm::LLVMContext &context;
   llvm::Module *module;
   llvm::IRBuilder<> builder;
@@ -28,12 +27,15 @@ private:
 
   ast::SumType *Bool;
 
+
+
   Debug<LEVEL_DEBUG> debug;
 public:
   struct Term {
     llvm::Function *value;
     const ast::Type *type;
   };
+  std::map<ast::Term *, Term> map;
   Codegen();
   Term generate(const ast::Term *const term, Env<llvm::APInt> &env);
   Term generate(const ast::Application *const app, Env<llvm::APInt> &env);

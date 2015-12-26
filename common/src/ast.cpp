@@ -10,6 +10,7 @@ Type::~Type() {}
 Term::~Term() {}
 
 bool Type::operator ==(const Type &b) const {
+  debug << "type " << this << " == " << &b << "\n";
   if (const PrimitiveType *prim = dynamic_cast<const PrimitiveType *>(&b))
     return *this == *prim;
   else if (const ProductType *prod = dynamic_cast<const ProductType *>(&b))
@@ -57,7 +58,6 @@ std::string ProductType::to_string() const {
   */
   return str;
 }
-
 
 SumType::SumType(const std::vector<std::pair<const Type *, const std::string> > &types)
   :types(types) {}
@@ -166,6 +166,6 @@ Fixpoint::Fixpoint(const Term *term)
   :term(term)
 {}
    
-Program::Program(const std::vector<const Type *> types, const Term *term)
+Program::Program(const std::map<const std::string, const Type *> types, const Term *term)
   :types(types), term(term)
 {}

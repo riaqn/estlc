@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <map>
 #include <string>
 #include <utility>
 #include <exception>
@@ -105,9 +106,9 @@ namespace ast{
   };
 
   struct Program {
-    std::vector<const Type *> types;
+    const std::map<const std::string, const Type *> types;
     const Term *term;
-    Program(const std::vector<const Type *> types, const Term *term);
+    Program(const std::map<const std::string, const Type *> types, const Term *term);
   };
 }
 

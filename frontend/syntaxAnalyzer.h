@@ -14,7 +14,7 @@ private:
 
 	ast::Term* buildBlock(TokenStream& stream);
 	void buildTypeDef(TokenStream& stream);
-	ast::Type* buildFuncType(TokenStream& stream);
+	const ast::Type* buildFuncType(TokenStream& stream);
 	ast::Term* buildFuncDef(TokenStream& stream);
 	ast::Term* buildFuncDesig(TokenStream& stream);
 	ast::Term* buildFactor(TokenStream& stream);
@@ -23,9 +23,10 @@ private:
 	ast::Term* buildSimExpr(TokenStream& stream);
 	ast::Term* buildMatchExpr(TokenStream& stream);
 
-	ast::Type* getType(const std::string&);
+	const ast::Type* getType(const std::string&);
 
 	ast::Term* root;
-	map<std::string, ast::Type*> types;
+	map<const string, const ast::Type*> types;
+	map<string, string> casts;
 };
 

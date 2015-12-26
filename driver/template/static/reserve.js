@@ -116,7 +116,7 @@ $(document).ready(function(){
     var root_element = $("#tree-root");
     prepare_ast(root, root_element);
     
-    
+    $("#token-tag").click();
 });
 
 $(".node").click(function(){

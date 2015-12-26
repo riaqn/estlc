@@ -1,0 +1,26 @@
+#quicksort program in MyLang
+
+Type list_nat =
+| nil : list_nat
+| cons_nat : nat -> list_nat -> list_nat
+
+Func filter (f : nat -> bool) (l : list_nat) : list_nat =
+match l
+| nil => nil
+| cons_nat x l0 => match (f x)
+               | true => (cons_nat x (filter f l0))
+               | false => (filter f l0)
+
+Func app (l0 : list_nat) (l1 : list_nat) : list_nat =
+match l0
+| nil => l1
+| cons_nat x l2 => (cons_nat x (app l2 l1))
+
+Func qsort (l : list_nat) : list_nat =
+match l
+| nil => nil
+| cons_nat x l0 => (app ( qsort (filter ( < x ) l0 ) ) 
+( cons_nat x (qsort ( filter >= x ) l0 ) ) ) 
+
+Func main (l : list_nat) : list_nat = 
+(qsort l)

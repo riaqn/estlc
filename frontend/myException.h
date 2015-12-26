@@ -3,7 +3,7 @@
 
 using namespace std;
 
-class lexical_error : public runtime_error  {
+class lexical_error : public runtime_error {
 public:
 	explicit lexical_error(const unsigned& line, const char& peek, const string& what = "")
 		:runtime_error(what), line(line), peek(peek)
@@ -19,7 +19,6 @@ public:
 		:runtime_error(what), token(token), line(line)
 	{
 	}
-  ~syntax_error() throw (){}
 	string token;
 	unsigned line;
 };

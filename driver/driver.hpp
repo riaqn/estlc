@@ -4,6 +4,7 @@
 #include <string>
 #include <fstream>
 #include "..\common\include\ast.hpp"
+#include "..\backend\include\codegen.hpp"
 
 namespace Driver{
 	enum termType{
@@ -20,6 +21,8 @@ namespace Driver{
 		sumtype,
 		product
 	};
+	std::string json;
+	std::map<const ast::Term *, Codegen::Term> *type_of_term;
 
 	int myTermType(const ast::Term* term){
 		// Reference  0
@@ -54,7 +57,6 @@ namespace Driver{
 		return -1;
 	}
 
-	std::string json;
 	void printTerm(const ast::Term* term);
 
 	void printFuncType(const ast::Type* type){
@@ -82,7 +84,7 @@ namespace Driver{
 			break;
 		case function:
 			json += "{\"id\":\"FuncType\", ";
-			json += "\"value\":\"Function Type\", ";
+			json += "\"value\":\"Function Type<br>" + type->to_string() + "\", ";
 			json += "\"left\":\"";
 			printFuncType(((ast::FunctionType *)type)->left);
 			json += "\", \"right\":\"";
@@ -102,11 +104,12 @@ namespace Driver{
 
 	void printReference(const ast::Reference* ref){
 		json += "{ \"id\":\"Reference\", ";
-		json += "\"value\" : \"" + ref->name + "\" }";
+		json += "\"value\" : \"" + ref->name + "<br>" + (*type_of_term)[ref].type->to_string() + "\" }";
 	}
 	void printAbstraction(const ast::Abstraction* abs){
 		json += "{ \"id\":\"Abstraction\", ";
 		json += "\"value\":\"Abstraction\", ";
+		//json += "\"value\":\"Abstraction<br>" + (*type_of_term)[abs].type->to_string() + "\", ";
 		json += "\"arg\":\"" + abs->arg + "\", ";
 
 		json += "\"type\":";
@@ -119,7 +122,7 @@ namespace Driver{
 	}
 	void printApplication(const ast::Application* app){
 		json += "{ \"id\":\"Application\", ";
-		json += "\"value\":\"Application\", ";
+		json += "\"value\":\"Application<br>" + (*type_of_term)[app].type->to_string() + "\", ";
 
 		json += "\"func\":";
 		printTerm(app->func);
@@ -144,7 +147,7 @@ namespace Driver{
 			json += "{";
 
 			json += "\"id\":\"Case\", ";
-			json += "\"value\":\"Case\", ";
+			json += "\"value\":\"Case<br>" + (*type_of_term)[sum->cases[i].second].type->to_string() + "\", ";
 			json += "\"name\":\"" + sum->cases[i].first + "\", ";
 			json += "\"term\":";
 			printTerm(sum->cases[i].second);
@@ -158,7 +161,7 @@ namespace Driver{
 	}
 	void printDeproduct(const ast::Deproduct* dep){
 		json += "{ \"id\":\"Deproduct\", ";
-		json += "\"value\":\"Deproduct\", ";
+		json += "\"value\":\"Deproduct<br>" + (*type_of_term)[dep].type->to_string() + "\", ";
 
 		json += "\"product\":";
 		printTerm(dep->product);
@@ -177,7 +180,7 @@ namespace Driver{
 	}
 	void printFixpoint(ast::Fixpoint* fix){
 		json += "{ \"id\":\"Fixpoint\", ";
-		json += "\"value\":\"Fixpoint\", ";
+		json += "\"value\":\"Fixpoint<br>" + (*type_of_term)[fix].type->to_string() + "\", ";
 
 		json += "\"term\":";
 		printTerm(fix->term);
@@ -208,7 +211,9 @@ namespace Driver{
 		}
 	}
 
-	void serialize(ast::Program* prog){
+	void serialize(ast::Program* prog, std::map<const ast::Term *, Codegen::Term> *tmp){
+		type_of_term = tmp;
+
 		json = "";
 		printTerm(prog->term);
 
@@ -218,10 +223,10 @@ namespace Driver{
 			json.replace(found, 1, "[prime]");
 		}
 
-		std::ifstream in("template/static/reserve.js");
-		std::ofstream out("template/static/template.js");
+		std::ifstream in("driver/template/static/reserve.js");
+		std::ofstream out("driver/template/static/template.js");
 		out << "var _MAGIC_AST_ =  '" << json << "';\n";
-
+		
 		char buffer[10000];
 		while (in.getline(buffer, 10000)){
 			out << buffer << std::endl;

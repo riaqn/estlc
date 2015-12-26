@@ -1,6 +1,6 @@
 #pragma once
-#include "token.h"
-#include <ast.hpp>
+#include "tokenStream.h"
+#include "../common/include/ast.hpp"
 #include <map>
 
 class SyntaxAnalyzer
@@ -8,25 +8,25 @@ class SyntaxAnalyzer
 public:
 	SyntaxAnalyzer(TokenStream& stream);
 	~SyntaxAnalyzer();
-	ast::Term* getRoot()const{ return root; }
-	void printTree(ostream& os);
+	ast::Program* getProgram()const;
 
 private:
-	inline bool isTypeId(const Token& token);
 
 	ast::Term* buildBlock(TokenStream& stream);
 	void buildTypeDef(TokenStream& stream);
-	ast::Type* buildFuncType(TokenStream& stream);
+	const ast::Type* buildFuncType(TokenStream& stream);
 	ast::Term* buildFuncDef(TokenStream& stream);
 	ast::Term* buildFuncDesig(TokenStream& stream);
 	ast::Term* buildFactor(TokenStream& stream);
 	ast::Term* buildTerm(TokenStream& stream);
 	ast::Term* buildExpr(TokenStream& stream);
 	ast::Term* buildSimExpr(TokenStream& stream);
-	ast::Application* buildMatchExpr(TokenStream& stream);
-	ast::Term* buildChoice(TokenStream& stream);
+	ast::Term* buildMatchExpr(TokenStream& stream);
 
+	const ast::Type* getType(const std::string&);
 
 	ast::Term* root;
+	map<const string, const ast::Type*> types;
+	map<string, string> casts;
 };
 

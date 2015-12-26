@@ -26,6 +26,7 @@ private:
 	const ast::Type* getType(const std::string&);
 
 	ast::Term* root;
-	map<const std::string, const ast::Type*> types;
+	map<const string, const ast::Type*> types;
+	map<string, string> casts;
 };
 

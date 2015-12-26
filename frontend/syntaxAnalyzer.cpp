@@ -1,6 +1,21 @@
 #include "syntaxAnalyzer.h"
 #include "myException.h"
 #include <iostream>
+
+
+// generate random string with length=len
+string rands(const unsigned len) {
+	static const char alphanum[] =
+		"0123456789"
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		"abcdefghijklmnopqrstuvwxyz";
+	string s;
+	for (unsigned i = 0; i < len; i++) {
+		s += alphanum[rand() % (sizeof(alphanum) - 1)];
+	}
+	return s;
+}
+
 SyntaxAnalyzer::SyntaxAnalyzer(TokenStream& stream)
 {
 	stream.initIter();
@@ -112,7 +127,9 @@ void SyntaxAnalyzer::buildTypeDef(TokenStream& stream){
 			sumType->types.push_back(pair<const ast::Type*, const string>(getType("unit"), cons));
 		}
 		else{
-			sumType->types.push_back(pair<const ast::Type*, const string>(new ast::ProductType(productTypes, cons), cons));
+			string cast = cons + rands(10);
+			sumType->types.push_back(pair<const ast::Type*, const string>(new ast::ProductType(productTypes, cons), cast));
+			casts[cons] = cast;
 		}
 
 		token = stream.next();			// if '|', go on, else stop
@@ -221,7 +238,7 @@ ast::Term* SyntaxAnalyzer::buildFuncDef(TokenStream& stream){
 
 ast::Term* SyntaxAnalyzer::buildFuncDesig(TokenStream& stream){
 	ast::Term *term = NULL;
-	Token token = stream.next();	// funct id
+	Token token = stream.next();	// func id
 	unsigned nrow = token.nrow, ncol = token.ncol;
 	string funcId = token.name;
 	token = stream.next();
@@ -244,6 +261,15 @@ ast::Term* SyntaxAnalyzer::buildFuncDesig(TokenStream& stream){
 		term->nrow = nrow;
 		term->ncol = ++ncol;
 		token = stream.next();
+	}
+	// add cast from product to sum
+	if (casts.find(funcId) != casts.end()){
+		ast::Reference *cast = new ast::Reference(casts[funcId]);
+		cast->nrow = nrow;
+		cast->ncol = ncol;
+		term = new ast::Application(cast, term);
+		term->nrow = nrow;
+		term->ncol = ncol;
 	}
 	return term;
 }
@@ -373,18 +399,6 @@ ast::Term* SyntaxAnalyzer::buildSimExpr(TokenStream& stream){
 	return term;
 }
 
-// generate random string with length=len
-string rands(const unsigned len) {
-	static const char alphanum[] =
-		"0123456789"
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-		"abcdefghijklmnopqrstuvwxyz";
-	string s;
-	for (unsigned i = 0; i < len; i++) {
-		s += alphanum[rand() % (sizeof(alphanum) - 1)];
-	}
-	return s;
-}
 
 ast::Term* SyntaxAnalyzer::buildMatchExpr(TokenStream& stream){
 	Token token = stream.next();

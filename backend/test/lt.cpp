@@ -6,7 +6,7 @@
 using namespace ast;
 
 Program *getProgram() {
-  std::ifstream ifs("qs.estlc");
+  std::ifstream ifs("lt.estlc");
   LexicalAnalyzer la;
   TokenStream ts(la.parse(ifs));
   

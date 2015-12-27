@@ -35,7 +35,7 @@ public:
     llvm::Function *value;
     const ast::Type *type;
   };
-  std::map<ast::Term *, Term> map;
+  std::map<const ast::Term *, Term> map;
   Codegen();
   Term generate(const ast::Term *const term, Env<llvm::APInt> &env);
   Term generate(const ast::Application *const app, Env<llvm::APInt> &env);

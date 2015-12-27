@@ -63,6 +63,7 @@ Codegen::Term Codegen::generate(const ast::Term *term, Env<APInt> &env) {
   else
     throw TermNotMatch(term, typeid(ast::Term));
   map.insert(std::make_pair(term, term0));
+  return term0;
 }
 
 Codegen::Term Codegen::generate(const ast::Application *app, Env<APInt> &env) {
@@ -104,17 +105,34 @@ Codegen::Term Codegen::generate(const ast::Reference *ref, Env<APInt> &env) {
   Function *f = Function::Create(funcType, Function::ExternalLinkage, "ref " + ref->name, module);
   BasicBlock *bb = BasicBlock::Create(context, "", f);
   builder.SetInsertPoint(bb);
-
-  auto value = env.find(ref->name);
   Value *stack = f->arg_begin();
+  Value *value;
+  const ast::Type *type;
 
-  Value *v_p = builder.CreateInBoundsGEP(stack, ConstantInt::get(context, value.first - env.size()));
-  Value *v_p_c = builder.CreateBitCast(v_p, PointerType::get(refType, 0));
-
-  LoadInst *load = builder.CreateLoad(refType, v_p_c);
-  builder.CreateRet(load);
+  size_t idx;
+  
+  int num;
+  try {
+    num = std::stoi(ref->name, &idx, 10);
+  } catch (std::invalid_argument e) {
+    idx = 0;
+  }
+  if (idx == ref->name.size()) {
+    value = generateMalloc(IntegerType::get(context, 32));
+    builder.CreateStore(ConstantInt::get(context, APInt(num, 32)), value);
+    type = new ast::PrimitiveType("Int");
+  } else {
+    auto v = env.find(ref->name);
+    
+    Value *v_p = builder.CreateInBoundsGEP(stack, ConstantInt::get(context, v.first - env.size()));
+    Value *v_p_c = builder.CreateBitCast(v_p, PointerType::get(refType, 0));
+    
+    value = builder.CreateLoad(refType, v_p_c);
+    type = v.second;
+  }
+  builder.CreateRet(value);
   verifyFunction(*f);
-  return Term{f, value.second};
+  return Term{f, type};
 }
 
 Codegen::Term Codegen::generate(const ast::Abstraction *const abs, Env<APInt> &env) {

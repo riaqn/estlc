@@ -3,10 +3,4 @@ Type list_int =
 | cons_int : Int -> list_int -> list_int
 
 Func main (l : list_int) : list_int = 
-match l
-| nil => l
-| cons_int x l' => match l'
-                   | nil  => l
-                   | cons_int x' l'' => match (< x x')
-                                        | false => l
-                                        | true => l'
+     cons_int 3 nil

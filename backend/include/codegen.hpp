@@ -3,6 +3,7 @@
 
 #include <map>
 #include <string>
+#include <ast.hpp>
 #include <vector>
 #include <memory>
 #include <utility>
@@ -12,12 +13,12 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/LLVMContext.h>
 
-#include "../../common/include/ast.hpp"
-#include "../../common/include/debug.hpp"
+#include <debug.hpp>
 
 #include "env.hpp"
 
 class Codegen {
+private:
   llvm::LLVMContext &context;
   llvm::Module *module;
   llvm::IRBuilder<> builder;
@@ -37,6 +38,7 @@ public:
     const ast::Type *type;
   };
   std::map<const ast::Term *, Term> map;
+
   Codegen();
   Term generate(const ast::Term *const term, Env<llvm::APInt> &env);
   Term generate(const ast::Application *const app, Env<llvm::APInt> &env);

@@ -1,13 +1,13 @@
-#include "../include/codegen.hpp"
-#include "../include/exception.hpp"
+#include "codegen.hpp"
+#include "exception.hpp"
+
 #include <vector>
 #include <llvm/IR/Verifier.h>
 #include <llvm/IR/Function.h>
 
 #include <cstdarg>
-//#include <debug.hpp>
-#include "../../common/include/debug.hpp"
 
+#include <debug.hpp>
 #include <iostream>
 
 using namespace llvm;
@@ -68,8 +68,8 @@ Codegen::Term Codegen::generate(const ast::Term *term, Env<APInt> &env) {
   return term0;
 }
 
+
 Codegen::Term Codegen::generate(const ast::Application *app, Env<APInt> &env) {
-	
   Term func = generate(app->func, env);
   Term arg = generate(app->arg, env);
 
@@ -217,9 +217,9 @@ Codegen::Term Codegen::generate(const ast::Desum *const des, Env<APInt> &env) {
     consts.push_back(term.value);
     if (termtype == NULL)
       termtype = term.type;
-	else if (*termtype != *term.type){
-		throw TypeNotMatch(TermException(pair.second, term.type), termtype);
-	}
+	  else if (*termtype != *term.type){
+		  throw TypeNotMatch(TermException(pair.second, term.type), termtype);
+	  }
   }
 
   
@@ -306,7 +306,7 @@ Codegen::Term Codegen::generate(const ast::Program &prog) {
 
   //for (const ast::Type *type : prog.types) {
   for (const std::pair<const std::string, const ast::Type *> pair1 : prog.types){
-	const ast::Type* type = pair1.second;
+  	const ast::Type* type = pair1.second;
 	/*
 	std::cout << "##################\n";
 	std::cout << pair1.first << std::endl;
@@ -314,6 +314,10 @@ Codegen::Term Codegen::generate(const ast::Program &prog) {
 	std::cout << type->to_string() << std::endl;
 	std::cout << "##################\n";
 	*/
+
+  // generate construcotr for tyeps
+  for (const ast::Type *type : prog.types) {
+    //std::cout << typeid(*type).name() << std::endl;
     if (auto prim = dynamic_cast<const ast::PrimitiveType *>(type)) {
       (void)prim;
       //do nothing for the primitive type
@@ -323,8 +327,7 @@ Codegen::Term Codegen::generate(const ast::Program &prog) {
       size_t n = sum->types.size();
       if ((n >> layout.getTypeAllocSizeInBits(indexType)) > 1) {
         // the idxlen is too short
-		// Yunhao
-
+    		// Yunhao
         //throw TypeException(sum);
       }
 	  // Yunhao
@@ -361,7 +364,6 @@ Codegen::Term Codegen::generate(const ast::Program &prog) {
 	  funcs.push_back(term);
 	  env.push(prim, term.type, APInt(64, layout.getTypeAllocSize(term.value->getType())));
   }
-
 
 
   Term term = generate(prog.term, env);

@@ -1,5 +1,5 @@
-#include "../include/ast.hpp"
-#include "../include/debug.hpp"
+#include <ast.hpp>
+#include <debug.hpp>
 
 using namespace ast;
 
@@ -11,6 +11,7 @@ Term::~Term() {}
 
 bool Type::operator ==(const Type &b) const {
   debug << "type " << this << " == " << &b << "\n";
+
   if (const PrimitiveType *prim = dynamic_cast<const PrimitiveType *>(&b))
     return *this == *prim;
   else if (const ProductType *prod = dynamic_cast<const ProductType *>(&b))

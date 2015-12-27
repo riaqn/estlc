@@ -1,9 +1,10 @@
 * Branches
-  - include :: This is the branch for header files. i.e., this is
+  - common :: This is the branch for common files. i.e., this is
                the branch for developing interfaces between components. Other
                branches should merge from this branch occasionally(to
                ensure compatibility)
   - front :: the branch for front-end development.
   - back :: the branch for back-end development.
+  - driver :: the branch for driver development.
   - master :: the branch for merging ALL other branches and resolve
               conflicts.

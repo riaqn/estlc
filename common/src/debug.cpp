@@ -1,3 +1,3 @@
-#include "../include/debug.hpp"
+#include <debug.hpp>
 
 Level LEVEL = LEVEL_DEBUG;

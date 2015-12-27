@@ -1,0 +1,64 @@
+#+Title: Inside the Backend
+* Type Checking
+  Type checking is relatively simple in our language, as we 're
+  /simply typed/, i.e., no polymorphism, each variable has a
+  specific type in a context.
+  
+  Our typing rules are available in other documents, see Design#Type Rules for
+  more information. Types of all introduced variables is (nearly) explicitly
+  specified, so no type inference will be performed. Some
+  operators(Desum, Deproduct) may not specify the type of their
+  arguments explicitly, but it's so easy to infer that it's nearly explicit.
+* Argument Passing
+  We use /Closure Conversion/ to handle the passing of argument, i.e.,
+  a frame full of values of free variables is passed to the function.
+  
+  E.g., a program as follows:
+  #+begin_src lisp
+    ((lambda (a:int)
+      (lambda (b:int)
+        + a b))
+    3 5)
+  #+end_src
+  Note that we first define an (anonymous) function, which takes an
+  =int= as argument =a= and returns a function, which again
+  takes an =int= as argument =b= and returns the sum of the two =int=.
+
+  Then we apply this defined function to =3= and =5=. This simple
+  program will be transformed into a C+ code as follows:
+  #+begin_src cpp
+    typedef std::map<string, void *> Env;
+
+    struct closure {
+      void *func;
+      Env env;
+    };
+
+    struct closure *f0(Env env) {
+      return closure{f1, env};
+    }
+    void *f1(Env env) {
+      /* suppose that the primitive plus is defined as (x : int) (y :
+         int) -> int*/
+      push(env, env['x']);
+      struct closure c = primitive_plus(env);
+      push(c.env, env['y']);
+      return c.func(c.env);
+    }
+
+    void *main(void **env) {
+      env['a'] = 3;
+      struct closure c = f0(env);
+      c.env['b'] = 5;
+      return c.func(c.env);
+    }
+  #+end_src
+  *Note* The above C++ code is for demostrating /Closure Conversion/
+   only and should not be taken seriously. E.g. we surely won't use
+   =std::map= for storing environment as it's too slow; instead we will
+   use a stack frame in heap, where =frame[0]= stores the most recent
+   pushed argument and so on.
+
+* Code generating
+  Our object machine is Low Level Virtual Machine(LLVM). All
+  specification of this VM is available from the official documents of LLVM.

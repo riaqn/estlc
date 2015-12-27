@@ -1,7 +1,10 @@
-#include "tokenStream.h"
-#include "lexicalAnalyzer.h"
-#include "syntaxAnalyzer.h"
-#include "myException.h"
+#include "frontend/tokenStream.h"
+#include "frontend/lexicalAnalyzer.h"
+#include "frontend/syntaxAnalyzer.h"
+#include "frontend/myException.h"
+#include "driver/driver.hpp"
+
+#include "backend/include/codegen.hpp"
 #include <iostream>
 #include <fstream>
 #include <regex>
@@ -105,30 +108,43 @@ int main(){
 		}
 		TokenStream tokenStream = lexicalAnalyzer.parse(is);
 
-		ofstream os("qsort.tks");
+		ofstream os("driver/qsort.tks");
 		for (unsigned i = 0; i < tokenStream.size(); i++){
 			Token* tp = &tokenStream[i];
-			os << "<" << TokenName[tp->type] << ">\t{" << tp->name << "}\tline " << tp->line << "\n";
+			os << "<" << TokenName[tp->type] << ">\t{" << tp->name << "}\tline " << tp->nrow << "\n";
 		}
 		os.close();
 		os.clear();
 
 		SyntaxAnalyzer syntaxAnalyzer(tokenStream);
-		os.open("qsort.ast");
+		os.open("driver/qsort.ast");
 
 		printTerm(syntaxAnalyzer.getProgram()->term, os, 0);
+
+		cout << "Frontend end successfully\n";
+
+		Codegen codegen;
+		Codegen::Term v = codegen.generate(*syntaxAnalyzer.getProgram());
+		cout << "Backend end successfully\n";
+
+		Driver::serialize(syntaxAnalyzer.getProgram(), &codegen.map);
+		cout << "Driver end successfully";
 		
+		getchar();
 	}
 	catch (const lexical_error& e){
 		cerr << srcfile << "(" << e.line << "):lexical error: \'" << e.peek << "\' is not a valid character\n";
+		getchar();
 		return 1;
 	}
 	catch (const syntax_error& e){
 		cerr << srcfile << "(" << e.line << "):syntax error: " << e.what() << " with " << e.token << "\n";
+		getchar();
 		return 1;
 	}
 	catch (const exception& e){
 		cerr << e.what() << "\n";
+		getchar();
 		return 1;
 	}
 	return 0;

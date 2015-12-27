@@ -1,0 +1,25 @@
+Type list_int = 
+| nil : list_int
+| cons_int : Int -> list_int -> list_int
+
+Func app (l0 : list_int) (l1 : list_int) : list_int =
+match l0
+| nil => l1
+| cons_int x l2 => (cons_int x (app l2 l1))
+
+Func reverse (l : list_int) : list_int = 
+     match l
+     | nil => l
+     | cons_int x l0 => (app (reverse l0) (cons_int x (nil unit) ))
+     
+Func remove (l : list_int) (n : Int) : list_int =
+     match l
+     | nil => l
+     | cons_int x l0 => match (= n 0)
+                        |false => (cons_int x (remove l0 (- n 1)))
+                        |true => l0
+     
+Func main (l : list_int) : list_int =
+     match l
+     | nil => l
+     | cons_int n l0 => (reverse (remove (reverse l0) n))

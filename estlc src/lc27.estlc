@@ -1,0 +1,20 @@
+Type list_int = 
+| nil : list_int
+| cons_int : Int -> list_int -> list_int
+
+Func length (l : list_int) : Int =
+match l
+| nil => 0
+| cons_int x l0 => (+ 1 (length l0))
+
+Func remove_instances (l : list_int)(n : Int) : list_int =
+match l
+| nil => l
+| cons_int x l0 => match (= x n)
+					| true => (remove_instances l0 n)
+					| false => (cons_int x (remove_instances l0 n))
+
+Func main (l : list_int) : list_int =
+match l
+| nil => l
+| cons_int n l0 => (cons_int (length (remove_instances l0 n)) (nil unit) )

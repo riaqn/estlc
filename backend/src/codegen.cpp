@@ -82,6 +82,13 @@ Codegen::Term Codegen::generate(const ast::Application *app, Env<APInt> &env) {
   if (*func_type->left != *arg.type){
 	  //std::cout << ((ast::Reference *)(app->func))->name << std::endl;
 	  throw TypeNotMatch(TermException(app->arg, arg.type), func_type->left);
+	  // Yunhao
+	  const std::string left = (((const ast::FunctionType *)arg.type))->left->to_string();
+	  if (left.compare("unit") != 0)
+		  throw TypeNotMatch(TermException(app->arg, arg.type), func_type->left);
+	  else{
+		  std::cout << "Warning: unit->xxx is converted to xxx directly" << std::endl;
+	  }
   }
 
   Function *f = Function::Create(funcType, Function::ExternalLinkage, func_type->to_string(), module);
@@ -126,7 +133,10 @@ Codegen::Term Codegen::generate(const ast::Reference *ref, Env<APInt> &env) {
   }
   if (idx == ref->name.size()) {
     value = generateMalloc(IntegerType::get(context, 32));
-    builder.CreateStore(ConstantInt::get(context, APInt(num, 32)), value);
+	//Value *value_casted = builder.CreateBitCast(value, refType);
+    builder.CreateStore(ConstantInt::get(context, APInt(32, num)), value);
+	value = builder.CreateBitCast(value, refType);
+
     type = new ast::PrimitiveType("Int");
   } else {
     auto v = env.find(ref->name);
@@ -138,6 +148,7 @@ Codegen::Term Codegen::generate(const ast::Reference *ref, Env<APInt> &env) {
     type = v.second;
   }
   builder.CreateRet(value);
+  std::cout << ref->name << std::endl;
   verifyFunction(*f);
   return Term{f, type};
 }
@@ -360,9 +371,9 @@ Codegen::Term Codegen::generate(const ast::Program &prog) {
 			  env.push(product->cons, term.type, APInt(64, layout.getTypeAllocSize(term.value->getType())));
 		  }
 
-        Term term = generate(sum, idx++);
-        funcs.push_back(term);
-        env.push(pair.second, term.type, APInt(64, layout.getTypeAllocSize(term.value->getType())));
+		  Term term = generate(sum, idx++);
+		  funcs.push_back(term);
+		  env.push(pair.second, term.type, APInt(64, layout.getTypeAllocSize(term.value->getType())));
       }
     } else if (auto product = dynamic_cast<const ast::ProductType *>(type)) {
       Term term = generate(product);
@@ -374,7 +385,7 @@ Codegen::Term Codegen::generate(const ast::Program &prog) {
 
   }
 
-  std::string prims[] = {"<", ">=", "+", "="};
+  std::string prims[] = {"<", ">=", "+", "=", "-", "unit"};
   for (auto prim : prims) {
     Term term = generatePrimitive(prim);
     funcs.push_back(term);
@@ -624,7 +635,15 @@ Function *Codegen::generateBinary(Function *f0) {
 }
 
 Codegen::Term Codegen::generatePrimitive(const std::string &prim) {
-  if (prim == "<") {
+	if (prim == "unit"){
+		Function *f = Function::Create(funcType, Function::ExternalLinkage, prim, module);
+		BasicBlock *bb = BasicBlock::Create(context, "", f);
+		builder.SetInsertPoint(bb);
+		builder.CreateRet(ConstantPointerNull::get(refType));
+
+		verifyFunction(*f);
+		return Term{ generateBinary(f), new ast::PrimitiveType("unit") };
+	} else if (prim == "<") {
     Function *f = Function::Create(funcType, Function::ExternalLinkage, prim, module);
     BasicBlock *bb = BasicBlock::Create(context, "", f);
     builder.SetInsertPoint(bb);
@@ -680,9 +699,31 @@ Codegen::Term Codegen::generatePrimitive(const std::string &prim) {
 
     return Term{generateBinary(f), new ast::FunctionType(new ast::PrimitiveType("Int"),
                                                          new ast::FunctionType(new ast::PrimitiveType("Int"),
-                                                                               Bool))};
+														 new ast::PrimitiveType("Int"))) };
 
-  }  else if (prim == "=") {
+  }
+  else if (prim == "-") {
+	  Function *f = Function::Create(funcType, Function::ExternalLinkage, prim, module);
+	  BasicBlock *bb = BasicBlock::Create(context, "", f);
+	  builder.SetInsertPoint(bb);
+	  Value *stack = f->arg_begin();
+
+	  Value *y = generatePop(refType, stack);
+	  Value *y_v = generateLoad(IntegerType::get(context, 32), y);
+	  Value *x = generatePop(refType, stack);
+	  Value *x_v = generateLoad(IntegerType::get(context, 32), x);
+
+	  Value *res = builder.CreateSub(x_v, y_v);
+	  Value *ret = generateSum(res, ConstantPointerNull::get(refType));
+	  builder.CreateRet(ret);
+	  verifyFunction(*f);
+
+	  return Term{ generateBinary(f), new ast::FunctionType(new ast::PrimitiveType("Int"),
+		  new ast::FunctionType(new ast::PrimitiveType("Int"),
+		  new ast::PrimitiveType("Int"))) };
+
+  }
+  else if (prim == "=") {
     Function *f = Function::Create(funcType, Function::ExternalLinkage, prim, module);
     BasicBlock *bb = BasicBlock::Create(context, "", f);
     builder.SetInsertPoint(bb);

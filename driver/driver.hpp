@@ -104,12 +104,25 @@ namespace Driver{
 
 	void printReference(const ast::Reference* ref){
 		json += "{ \"id\":\"Reference\", ";
-		json += "\"value\" : \"" + ref->name + "<br>" + (*type_of_term)[ref].type->to_string() + "\" }";
+		const ast::Type *tp = (*type_of_term)[ref].type;
+		if (tp == NULL){
+			json += "\"value\" : \"" + ref->name  + "\" }";
+		}
+		else{
+			json += "\"value\" : \"" + ref->name + "<br>" + (*type_of_term)[ref].type->to_string() + "\" }";
+		}
 	}
 	void printAbstraction(const ast::Abstraction* abs){
 		json += "{ \"id\":\"Abstraction\", ";
-		json += "\"value\":\"Abstraction\", ";
-		//json += "\"value\":\"Abstraction<br>" + (*type_of_term)[abs].type->to_string() + "\", ";
+
+		const ast::Type *tp = (*type_of_term)[abs].type;
+		if (tp == NULL){
+			json += "\"value\":\"Abstraction\", ";
+		}
+		else{
+			json += "\"value\":\"Abstraction<br>" + (*type_of_term)[abs].type->to_string() + "\", ";
+		}
+
 		json += "\"arg\":\"" + abs->arg + "\", ";
 
 		json += "\"type\":";
@@ -122,8 +135,15 @@ namespace Driver{
 	}
 	void printApplication(const ast::Application* app){
 		json += "{ \"id\":\"Application\", ";
-		json += "\"value\":\"Application<br>" + (*type_of_term)[app].type->to_string() + "\", ";
 
+		const ast::Type *tp = (*type_of_term)[app].type;
+		if (tp == NULL){
+			json += "\"value\":\"Application\", ";
+		}
+		else{
+			json += "\"value\":\"Application<br>" + (*type_of_term)[app].type->to_string() + "\", ";
+		}
+		
 		json += "\"func\":";
 		printTerm(app->func);
 		json += ", ";
@@ -147,7 +167,16 @@ namespace Driver{
 			json += "{";
 
 			json += "\"id\":\"Case\", ";
-			json += "\"value\":\"Case<br>" + (*type_of_term)[sum->cases[i].second].type->to_string() + "\", ";
+			
+
+			const ast::Type *tp = (*type_of_term)[sum->cases[i].second].type;
+			if (tp == NULL){
+				json += "\"value\":\"Case\", ";
+			}
+			else{
+				json += "\"value\":\"Case<br>" + (*type_of_term)[sum->cases[i].second].type->to_string() + "\", ";
+			}
+
 			json += "\"name\":\"" + sum->cases[i].first + "\", ";
 			json += "\"term\":";
 			printTerm(sum->cases[i].second);
@@ -161,7 +190,15 @@ namespace Driver{
 	}
 	void printDeproduct(const ast::Deproduct* dep){
 		json += "{ \"id\":\"Deproduct\", ";
-		json += "\"value\":\"Deproduct<br>" + (*type_of_term)[dep].type->to_string() + "\", ";
+
+		const ast::Type *tp = (*type_of_term)[dep].type;
+		if (tp == NULL){
+			json += "\"value\":\"Deproduct\", ";
+		}
+		else{
+			json += "\"value\":\"Deproduct<br>" + (*type_of_term)[dep].type->to_string() + "\", ";
+		}
+
 
 		json += "\"product\":";
 		printTerm(dep->product);
@@ -180,7 +217,14 @@ namespace Driver{
 	}
 	void printFixpoint(ast::Fixpoint* fix){
 		json += "{ \"id\":\"Fixpoint\", ";
-		json += "\"value\":\"Fixpoint<br>" + (*type_of_term)[fix].type->to_string() + "\", ";
+
+		const ast::Type *tp = (*type_of_term)[fix].type;
+		if (tp == NULL){
+			json += "\"value\":\"Fixpoint\", ";
+		}
+		else{
+			json += "\"value\":\"Fixpoint<br>" + (*type_of_term)[fix].type->to_string() + "\", ";
+		}
 
 		json += "\"term\":";
 		printTerm(fix->term);

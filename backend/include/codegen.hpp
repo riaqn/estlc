@@ -18,7 +18,6 @@
 #include "env.hpp"
 
 class Codegen {
-private:
   llvm::LLVMContext &context;
   llvm::Module *module;
   llvm::IRBuilder<> builder;
@@ -30,6 +29,8 @@ private:
   llvm::FunctionType *funcType;
 
   const ast::SumType *Bool;
+
+
 
   Debug<LEVEL_DEBUG> debug;
 public:

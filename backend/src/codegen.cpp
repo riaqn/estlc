@@ -334,9 +334,6 @@ Codegen::Term Codegen::generate(const ast::Program &prog) {
 	std::cout << "##################\n";
 	*/
 
-  // generate construcotr for tyeps
-  //for (const ast::Type *type : prog.types) {
-    //std::cout << typeid(*type).name() << std::endl;
     if (auto prim = dynamic_cast<const ast::PrimitiveType *>(type)) {
       (void)prim;
       //do nothing for the primitive type

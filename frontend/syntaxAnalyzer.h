@@ -1,6 +1,6 @@
 #pragma once
 #include "tokenStream.h"
-#include "../common/include/ast.hpp"
+#include <ast.hpp>
 #include <map>
 
 class SyntaxAnalyzer

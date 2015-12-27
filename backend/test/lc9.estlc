@@ -1,0 +1,23 @@
+Type list_int = 
+| nil : list_int
+| cons_int : Int -> list_int -> list_int
+
+Func reverse (l : list_int) : list_int = 
+     match l
+     | nil => nil
+     | cons_nat x l0 => cons_int (reverse l0) (cons_int x nil)
+Func equal (l1 : list_int) (l2 : list_int) : Bool =
+     match l1
+     | nil => match l2
+              | nil => true
+              | cons_int x2 l2' => false
+     | cons_int x1 l1' => match l2
+                          | nil => false
+                          | cons_int x2 l2' => match (= x1 x2)
+                                               | false => false
+                                               | true => equal l1' l2'
+       
+Func main (l : list_int) : list_int =
+     match (equal l (reverse l))
+     | false => cons_int 0 nil
+     | true => cons_int 1 nil

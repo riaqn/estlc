@@ -43,9 +43,10 @@ struct Token{
 	};
 	TokenType type;
 	string name;
-	unsigned line;
+	unsigned nrow;
+	unsigned ncol;
 
-	Token(TokenType type, string name, unsigned line);
+	Token(TokenType type, string name, unsigned nrow, unsigned ncol);
 	Token(const Token& token);
 	bool operator==(const Token& token);
 };

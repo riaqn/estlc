@@ -108,7 +108,7 @@ int main(){
 		ofstream os("qsort.tks");
 		for (unsigned i = 0; i < tokenStream.size(); i++){
 			Token* tp = &tokenStream[i];
-			os << "<" << TokenName[tp->type] << ">\t{" << tp->name << "}\tline " << tp->line << "\n";
+			os << "<" << TokenName[tp->type] << ">\t{" << tp->name << "}\tline " << tp->nrow << "\n";
 		}
 		os.close();
 		os.clear();

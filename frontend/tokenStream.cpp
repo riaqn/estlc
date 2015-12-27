@@ -1,11 +1,11 @@
 #include "tokenStream.h"
 
-Token::Token(TokenType type, string name, unsigned line)
-	:type(type), name(name), line(line)
+Token::Token(TokenType type, string name, unsigned nrow, unsigned ncol)
+	:type(type), name(name), nrow(nrow), ncol(ncol)
 {
 }
 Token::Token(const Token& token)
-	:type(token.type), name(token.name), line(token.line)
+	:Token(token.type, token.name, token.nrow, token.ncol)
 {
 }
 bool Token::operator==(const Token& token){
@@ -26,7 +26,7 @@ void TokenStream::initIter(){
 }
 const Token& TokenStream::next(){
 	if (!hasNext()){
-		throw new syntax_error("_TokenStream", (it - 1)->line, "TokenStream ends unexpectedly");
+		throw new syntax_error("_TokenStream", (it - 1)->nrow, "TokenStream ends unexpectedly");
 	}
 	return *it++;
 }

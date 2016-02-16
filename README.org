@@ -1,3 +1,7 @@
+/Warning: This project is obsoleted and is full of bugs. It 's not
+deleted for only archive use. You 're at your own risk while reading
+or using the code./
+
 * Branches
   - common :: This is the branch for common files. i.e., this is
                the branch for developing interfaces between components. Other
